@@ -1,23 +1,23 @@
-# Modello fisico da dati (Symbolic Regression)
+# Physics model from data (Symbolic Regression)
 
-Esempio che usa **SymbolicODEModel**: un modello ODE il cui termine destro `rhs(x, u, t)` è appreso da serie temporali (es. da CSV) tramite symbolic regression (genetic programming, gplearn).
+Example using **SymbolicODEModel**: an ODE model whose right-hand side `rhs(x, u, t)` is learned from time series (e.g. from CSV) via symbolic regression (genetic programming, gplearn).
 
-- **Solo modello fisico**: stesso contratto di `ODEModel` (`initialize`, `step`, `rhs`), utilizzabile nel twin al posto di modelli parametrici.
-- **Dipendenze**: `pip install twinops[symbolic]` (installa gplearn).
+- **Physics model only**: same contract as `ODEModel` (`initialize`, `step`, `rhs`), usable in the twin instead of parametric models.
+- **Dependencies**: `pip install twinops[symbolic]` (installs gplearn).
 
-## Script
+## Scripts
 
-- **run_symbolic_ode.py** — Fit da (t, x, u) e simulazione step-by-step (solo fisica).
-- **run_twin_symbolic.py** — Esempio completo twin: fit fisica simbolica → TwinSystem (physics + EKF + Health + RUL) → loop con stream (u, y) → history → export CSV e grafici.
+- **run_symbolic_ode.py** — Fit from (t, x, u) and step-by-step simulation (physics only).
+- **run_twin_symbolic.py** — Full twin example: fit symbolic physics → TwinSystem (physics + EKF + Health + RUL) → loop with stream (u, y) → history → CSV export and plots.
 
-## Esecuzione
+## Running
 
 ```bash
 pip install twinops[symbolic]
 python run_symbolic_ode.py
-python run_twin_symbolic.py   # esempio completo twin
+python run_twin_symbolic.py   # full twin example
 ```
 
-## Dati
+## Data
 
-I dati possono provenire da CSV: colonne `t`, `x_1..x_n`, `u_1..u_m`. Si usa `fit_from_timeseries(t, x, u)`; le derivate `dx/dt` sono stimate con differenze centrali.
+Data can come from CSV: columns `t`, `x_1..x_n`, `u_1..u_m`. Use `fit_from_timeseries(t, x, u)`; derivatives `dx/dt` are estimated with central differences.

@@ -1,10 +1,10 @@
 """
-Esempio: degradazione graduale (efficienza che cala nel tempo).
+Example: gradual degradation (efficiency decreasing over time).
 
-Differenza rispetto a run_online_degradation.py:
-- Guasto a step: efficienza passa da 1 a 0.72 allo step 400.
-- Questo esempio: efficienza cala linearmente da 1.0 a 0.70 tra step 200 e 600,
-  poi resta 0.70. Verifica che anomaly, HI e RUL reagiscano a un trend lento.
+Difference from run_online_degradation.py:
+- Step fault: efficiency jumps from 1 to 0.72 at step 400.
+- This example: efficiency decreases linearly from 1.0 to 0.70 between steps 200 and 600,
+  then stays 0.70. Verifies that anomaly, HI and RUL respond to a slow trend.
 """
 
 import sys
@@ -22,11 +22,11 @@ from twinops.health import HealthIndicator, SimpleRUL
 
 
 # ---------------------------------------------------------------------------
-# Modello fisico: pompa [portata, pressione], ingresso [velocità]
+# Physics model: pump [flow rate, pressure], input [speed]
 # ---------------------------------------------------------------------------
 
 class PumpPhysics(ODEModel):
-    """Pompa: stato [portata q, pressione p], ingresso [velocità omega]."""
+    """Pump: state [flow q, pressure p], input [speed omega]."""
 
     def rhs(self, x: np.ndarray, u: np.ndarray, t: float) -> np.ndarray:
         q, p = x[0], x[1]
@@ -37,7 +37,7 @@ class PumpPhysics(ODEModel):
 
 
 # ---------------------------------------------------------------------------
-# Generatore online con degradazione graduale (lineare)
+# Online generator with gradual (linear) degradation
 # ---------------------------------------------------------------------------
 
 def generate_gradual_degradation(
@@ -54,9 +54,9 @@ def generate_gradual_degradation(
     seed: int = 43,
 ):
     """
-    Genera (u_t, y_t) step-by-step.
-    Efficienza: 1.0 fino a decay_start_step; poi cala linearmente fino a
-    efficiency_min a decay_end_step; poi resta efficiency_min.
+    Generate (u_t, y_t) step-by-step.
+    Efficiency: 1.0 until decay_start_step; then decreases linearly to
+    efficiency_min at decay_end_step; then stays efficiency_min.
     """
     rng = np.random.default_rng(seed)
     x = np.asarray(x0, dtype=float).copy()
@@ -65,7 +65,7 @@ def generate_gradual_degradation(
         out = physics.step(state=x, u=u_t, dt=dt)
         x = out["state"]
         y_nominal = out["output"]
-        # Efficienza: rampa lineare da 1 a efficiency_min tra decay_start e decay_end
+        # Efficiency: linear ramp from 1 to efficiency_min between decay_start and decay_end
         if k < decay_start_step:
             eff = 1.0
         elif k >= decay_end_step:
@@ -129,9 +129,9 @@ def main() -> None:
         efficiency_min=efficiency_min,
     )
 
-    print("Pipeline online: degradazione graduale (rampa lineare)")
-    print(f"  Step 0-{decay_start}: regime normale (eff=1.0)")
-    print(f"  Step {decay_start}-{decay_end}: efficienza cala linearmente -> {efficiency_min}")
+    print("Online pipeline: gradual degradation (linear ramp)")
+    print(f"  Step 0-{decay_start}: normal regime (eff=1.0)")
+    print(f"  Step {decay_start}-{decay_end}: efficiency decreases linearly -> {efficiency_min}")
     print(f"  Step {decay_end}-{n_steps}: eff={efficiency_min}")
     print("Running...")
 
@@ -157,12 +157,12 @@ def main() -> None:
             print(f"  [step {step}] ALERT CUSUM: anomaly={result.anomaly:.4f} HI={result.health_indicator:.3f} RUL={result.rul}")
 
         if step == decay_start:
-            print(f"  [step {step}] Inizio degradazione graduale")
+            print(f"  [step {step}] Gradual degradation start")
         if step == decay_end and result.rul is not None:
-            print(f"  [step {step}] Fine rampa; RUL stimata: {result.rul:.2f} s")
+            print(f"  [step {step}] Ramp end; estimated RUL: {result.rul:.2f} s")
 
-    print(f"Steps: {len(history)}, stato finale: {twin.state}")
-    print("Export CSV e grafici...")
+    print(f"Steps: {len(history)}, final state: {twin.state}")
+    print("Exporting CSV and plots...")
 
     out_dir = Path(__file__).resolve().parent
     csv_path = out_dir / "gradual_degradation_history.csv"
@@ -172,9 +172,9 @@ def main() -> None:
     try:
         _plot_results(history, decay_start, decay_end, out_dir)
     except ImportError:
-        print("  (matplotlib non disponibile, grafici saltati)")
+        print("  (matplotlib not available, plots skipped)")
 
-    print("Fatto.")
+    print("Done.")
 
 
 def _plot_results(history: TwinHistory, decay_start: int, decay_end: int, out_dir: Path) -> None:
@@ -187,10 +187,10 @@ def _plot_results(history: TwinHistory, decay_start: int, decay_end: int, out_di
     fig, axes = plt.subplots(4, 1, sharex=True, figsize=(10, 10))
 
     ax = axes[0]
-    ax.plot(steps, data["state_0"], label="portata stimata")
-    ax.plot(steps, data["state_1"], label="pressione stimata")
-    ax.axvspan(decay_start, decay_end, color="gray", alpha=0.2, label="rampa degradazione")
-    ax.set_ylabel("Stato")
+    ax.plot(steps, data["state_0"], label="estimated flow")
+    ax.plot(steps, data["state_1"], label="estimated pressure")
+    ax.axvspan(decay_start, decay_end, color="gray", alpha=0.2, label="degradation ramp")
+    ax.set_ylabel("State")
     ax.legend(loc="upper right", fontsize=8)
     ax.grid(True, alpha=0.3)
 
@@ -220,7 +220,7 @@ def _plot_results(history: TwinHistory, decay_start: int, decay_end: int, out_di
     ax.legend(loc="upper right", fontsize=8)
     ax.grid(True, alpha=0.3)
 
-    plt.suptitle("Degradazione graduale (rampa lineare) — TwinOps")
+    plt.suptitle("Gradual degradation (linear ramp) — TwinOps")
     plt.tight_layout()
     plot_path = out_dir / "gradual_degradation_plots.png"
     plt.savefig(plot_path, dpi=120)

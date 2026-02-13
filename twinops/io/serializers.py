@@ -1,4 +1,4 @@
-"""Salvataggio e caricamento di configurazioni e snapshot del twin."""
+"""Save and load configurations and twin snapshots."""
 
 import json
 from pathlib import Path
@@ -8,7 +8,7 @@ import numpy as np
 
 
 def _numpy_encoder(obj: Any) -> Any:
-    """Converte array numpy in liste per JSON."""
+    """Convert numpy arrays to lists for JSON."""
     if isinstance(obj, np.ndarray):
         return obj.tolist()
     if isinstance(obj, (np.floating, np.float32, np.float64)):
@@ -20,12 +20,12 @@ def _numpy_encoder(obj: Any) -> Any:
 
 def save_config(config: Dict[str, Any], path: Union[str, Path]) -> None:
     """
-    Salva una configurazione (dict) in JSON.
-    Array numpy vengono convertiti in liste.
+    Save a configuration (dict) to JSON.
+    Numpy arrays are converted to lists.
     """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    # Converti numpy per serializzazione
+    # Convert numpy for serialization
     def convert(d: Any) -> Any:
         if isinstance(d, np.ndarray):
             return d.tolist()
@@ -42,7 +42,7 @@ def save_config(config: Dict[str, Any], path: Union[str, Path]) -> None:
 
 
 def load_config(path: Union[str, Path]) -> Dict[str, Any]:
-    """Carica una configurazione da JSON."""
+    """Load a configuration from JSON."""
     path = Path(path)
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
@@ -50,7 +50,7 @@ def load_config(path: Union[str, Path]) -> Dict[str, Any]:
 
 def save_snapshot(state_dict: Dict[str, Any], path: Union[str, Path]) -> None:
     """
-    Salva uno snapshot del twin (state_dict) in .npz per array e JSON per metadati.
+    Save a twin snapshot (state_dict) to .npz for arrays and JSON for metadata.
     """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -67,7 +67,7 @@ def save_snapshot(state_dict: Dict[str, Any], path: Union[str, Path]) -> None:
 
 
 def load_snapshot(path: Union[str, Path]) -> Dict[str, Any]:
-    """Carica snapshot da .npz + .meta.json."""
+    """Load snapshot from .npz + .meta.json."""
     path = Path(path)
     data = dict(np.load(path.with_suffix(".npz"), allow_pickle=True))
     meta_path = path.with_suffix(path.suffix + ".meta.json")

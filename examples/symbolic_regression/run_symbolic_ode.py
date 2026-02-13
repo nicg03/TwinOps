@@ -1,9 +1,9 @@
 """
-Esempio: modello fisico appreso da dati CSV/serie temporali (symbolic regression).
+Example: physics model learned from CSV/time series data (symbolic regression).
 
-Genera dati da un sistema del primo ordine (FirstOrderLag), apprende il rhs
-tramite SymbolicODEModel e usa il modello come fisica nel twin (stesso contratto
-di ODEModel). Richiede: pip install twinops[symbolic]
+Generates data from a first-order system (FirstOrderLag), learns the rhs
+via SymbolicODEModel and uses the model as physics in the twin (same contract
+as ODEModel). Requires: pip install twinops[symbolic]
 """
 
 import sys
@@ -17,14 +17,14 @@ sys.path.insert(0, str(ROOT))
 try:
     import gplearn  # noqa: F401
 except ImportError:
-    print("Questo esempio richiede gplearn.")
+    print("This example requires gplearn.")
     sys.exit(1)
 
 from twinops.physics import SymbolicODEModel, FirstOrderLag, RK4Integrator
 
 
 def main() -> None:
-    # --- Dati "sintetici" (in pratica potrebbero venire da CSV) ---
+    # --- Synthetic data (in practice could come from CSV) ---
     tau = 1.0
     dt = 0.05
     n_steps = 300
@@ -42,7 +42,7 @@ def main() -> None:
         x_vals.append(x.copy())
     x_arr = np.array(x_vals)
 
-    # --- Apprendi modello fisico (symbolic regression) ---
+    # --- Learn physics model (symbolic regression) ---
     model = SymbolicODEModel(
         n_states=1,
         n_inputs=1,
@@ -53,11 +53,11 @@ def main() -> None:
     )
     model.fit_from_timeseries(t, x_arr, u_arr)
 
-    print("Espressioni apprese per dx/dt:")
+    print("Learned expressions for dx/dt:")
     for i, expr in enumerate(model.get_expressions()):
         print(f"  dx{i}/dt = {expr}")
 
-    # --- Usa il modello come fisica: step identico a ODEModel ---
+    # --- Use model as physics: step identical to ODEModel ---
     x_sym = np.array([0.0])
     t_cur = 0.0
     trajectory = [x_sym[0]]
@@ -69,8 +69,8 @@ def main() -> None:
 
     trajectory = np.array(trajectory)
     err = np.abs(trajectory - x_arr[:, 0])
-    print(f"\nErrore medio |x_sim - x_true|: {np.mean(err):.6f}")
-    print("Il SymbolicODEModel funge da modello fisico: initialize, step, rhs come ODEModel.")
+    print(f"\nMean error |x_sim - x_true|: {np.mean(err):.6f}")
+    print("SymbolicODEModel acts as physics model: initialize, step, rhs like ODEModel.")
 
 
 if __name__ == "__main__":

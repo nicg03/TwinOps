@@ -1,8 +1,8 @@
 """
-Modelli fisici parametrici pronti all'uso.
+Ready-to-use parametric physics models.
 
-Sottoclassi di ODEModel con rhs() già implementato; l'utente imposta solo i parametri
-senza scrivere equazioni. Utili per comporre twin o come base da estendere.
+ODEModel subclasses with rhs() already implemented; the user only sets parameters
+without writing equations. Useful for composing twins or as a base to extend.
 """
 
 from typing import Any, Optional
@@ -14,8 +14,8 @@ from twinops.physics.ode import ODEModel
 
 class FirstOrderLag(ODEModel):
     """
-    Sistema del primo ordine: dx/dt = (u - x) / tau.
-    Stato scalare x; ingresso u (usa u[0] se u è vettore).
+    First-order system: dx/dt = (u - x) / tau.
+    Scalar state x; input u (uses u[0] if u is a vector).
     """
 
     def __init__(self, tau: float = 1.0, u_index: int = 0, **kwargs: Any) -> None:
@@ -30,8 +30,8 @@ class FirstOrderLag(ODEModel):
 
 class DoubleIntegrator(ODEModel):
     """
-    Doppio integratore: posizione e velocità; dv/dt = u (accelerazione).
-    Stato [pos, vel]; ingresso u = accelerazione (u[0]).
+    Double integrator: position and velocity; dv/dt = u (acceleration).
+    State [pos, vel]; input u = acceleration (u[0]).
     """
 
     def __init__(self, u_index: int = 0, **kwargs: Any) -> None:
@@ -46,9 +46,9 @@ class DoubleIntegrator(ODEModel):
 
 class MassSpringDamper(ODEModel):
     """
-    Oscillatore meccanico: m*ddx + c*dx + k*x = F.
-    Stato [pos, vel]; rhs: dx/dt = vel, dv/dt = (F - k*pos - c*vel) / m.
-    F da ingresso u[0] (default).
+    Mechanical oscillator: m*ddx + c*dx + k*x = F.
+    State [pos, vel]; rhs: dx/dt = vel, dv/dt = (F - k*pos - c*vel) / m.
+    F from input u[0] (default).
     """
 
     def __init__(
@@ -74,9 +74,9 @@ class MassSpringDamper(ODEModel):
 
 class TankLevel(ODEModel):
     """
-    Livello in serbatoio: A * dh/dt = q_in - q_out(h).
-    Stato [h]; q_out = k_out * sqrt(h) (orifizio) o lineare.
-    Ingresso u = q_in (u[0]); parametri A, k_out.
+    Tank level: A * dh/dt = q_in - q_out(h).
+    State [h]; q_out = k_out * sqrt(h) (orifice) or linear.
+    Input u = q_in (u[0]); parameters A, k_out.
     """
 
     def __init__(
@@ -104,9 +104,9 @@ class TankLevel(ODEModel):
 
 class PumpLike(ODEModel):
     """
-    Pompa semplificata: stato [portata q, pressione p], ingresso [velocità omega].
+    Simplified pump: state [flow q, pressure p], input [speed omega].
     dq/dt = -a*q + b*omega, dp/dt = c*q - d*p.
-    Coerente con l'esempio run_pump_twin.
+    Consistent with the run_pump_twin example.
     """
 
     def __init__(
@@ -133,8 +133,8 @@ class PumpLike(ODEModel):
 
 class HarmonicOscillator(ODEModel):
     """
-    Oscillatore armonico: d²x/dt² + omega² x = 0.
-    Stato [pos, vel]; rhs: dx/dt = vel, dv/dt = -omega²*pos.
+    Harmonic oscillator: d²x/dt² + omega² x = 0.
+    State [pos, vel]; rhs: dx/dt = vel, dv/dt = -omega²*pos.
     """
 
     def __init__(self, omega: float = 1.0, **kwargs: Any) -> None:

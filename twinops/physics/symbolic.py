@@ -1,12 +1,12 @@
 """
-Modello fisico ODE appreso da dati tramite symbolic regression (genetic programming).
+ODE physics model learned from data via symbolic regression (genetic programming).
 
-SymbolicODEModel è un ODEModel il cui rhs(x, u, t) è dato da espressioni simboliche
-apprese da serie temporali (es. CSV). Funge solo da modello fisico: stesso contratto
-di ODEModel (initialize, step, rhs), utilizzabile nel twin al posto di modelli
-parametrici (FirstOrderLag, PumpLike, ecc.).
+SymbolicODEModel is an ODEModel whose rhs(x, u, t) is given by symbolic expressions
+learned from time series (e.g. CSV). Acts only as a physics model: same contract
+as ODEModel (initialize, step, rhs), usable in the twin instead of parametric
+models (FirstOrderLag, PumpLike, etc.).
 
-Richiede dipendenza opzionale: pip install twinops[symbolic]  # installa gplearn
+Requires optional dependency: pip install twinops[symbolic]  # installs gplearn
 """
 
 from typing import Any, Dict, List, Optional
@@ -23,7 +23,7 @@ except ImportError:
 
 def _compute_dx_dt_central(t: np.ndarray, x: np.ndarray) -> np.ndarray:
     """
-    Derivate temporali con differenze centrali (interno), forward/backward agli estremi.
+    Time derivatives with central differences (interior), forward/backward at endpoints.
     t: (n_steps,), x: (n_steps, n_states) -> (n_steps, n_states)
     """
     n_steps, n_states = x.shape
@@ -48,7 +48,7 @@ def _build_design_matrix(
     n_states: int,
     n_inputs: int,
 ) -> np.ndarray:
-    """Matrice delle features: [x_1..x_n, u_1..u_m, t]. Shape (n_samples, n_states + n_inputs + 1)."""
+    """Feature matrix: [x_1..x_n, u_1..u_m, t]. Shape (n_samples, n_states + n_inputs + 1)."""
     n_steps = x.shape[0]
     cols: List[np.ndarray] = []
     for j in range(n_states):
@@ -62,11 +62,11 @@ def _build_design_matrix(
 
 class SymbolicODEModel(ODEModel):
     """
-    Modello ODE il cui rhs è appreso da dati tramite symbolic regression (gplearn).
+    ODE model whose rhs is learned from data via symbolic regression (gplearn).
 
-    Dopo fit_from_timeseries(t, x, u) o fit(X, y), rhs(x, u, t) valuta le
-    espressioni apprese per ogni componente di stato. Si usa come qualsiasi
-    altro ODEModel nel twin (solo come modello fisico).
+    After fit_from_timeseries(t, x, u) or fit(X, y), rhs(x, u, t) evaluates the
+    learned expressions for each state component. Use like any other ODEModel
+    in the twin (as physics model only).
     """
 
     def __init__(
@@ -83,23 +83,23 @@ class SymbolicODEModel(ODEModel):
     ) -> None:
         """
         Args:
-            n_states: numero di variabili di stato.
-            n_inputs: numero di ingressi (default 0).
-            integrator: integratore ODE (default RK4).
-            population_size: popolazione per il genetic programming.
-            generations: generazioni di evoluzione.
-            function_set: operazioni simboliche (add, sub, mul, div, sqrt, ...).
-            random_state: seed per riproducibilità.
-            **symreg_kwargs: altri argomenti per gplearn.genetic.SymbolicRegressor.
+            n_states: number of state variables.
+            n_inputs: number of inputs (default 0).
+            integrator: ODE integrator (default RK4).
+            population_size: population for genetic programming.
+            generations: evolution generations.
+            function_set: symbolic operations (add, sub, mul, div, sqrt, ...).
+            random_state: seed for reproducibility.
+            **symreg_kwargs: other arguments for gplearn.genetic.SymbolicRegressor.
         """
         super().__init__(integrator=integrator)
         if SymbolicRegressor is None:
             raise ImportError(
-                "SymbolicODEModel richiede gplearn. Installa con: pip install twinops[symbolic]"
+                "SymbolicODEModel requires gplearn. Install with: pip install twinops[symbolic]"
             )
         self.n_states = n_states
         self.n_inputs = n_inputs
-        self._regressors: List[Any] = []  # uno per ogni stato
+        self._regressors: List[Any] = []  # one per state variable
         self._feature_names: List[str] = []
         self._symreg_kwargs = {
             "population_size": population_size,
@@ -126,23 +126,23 @@ class SymbolicODEModel(ODEModel):
         u: Optional[np.ndarray] = None,
     ) -> "SymbolicODEModel":
         """
-        Apprende rhs da serie temporali (t, x, u).
-        Le derivate dx/dt sono stimate con differenze centrali.
+        Learn rhs from time series (t, x, u).
+        Derivatives dx/dt are estimated with central differences.
 
         Args:
-            t: tempi, shape (n_steps,).
-            x: stati, shape (n_steps, n_states).
-            u: ingressi, shape (n_steps,) o (n_steps, n_inputs). Se None, usa zeri.
+            t: times, shape (n_steps,).
+            x: states, shape (n_steps, n_states).
+            u: inputs, shape (n_steps,) or (n_steps, n_inputs). If None, use zeros.
 
         Returns:
-            self (per method chaining).
+            self (for method chaining).
         """
         t = np.asarray(t, dtype=float).ravel()
         x = np.asarray(x, dtype=float)
         n_steps = x.shape[0]
         if x.shape[1] != self.n_states:
             raise ValueError(
-                f"x deve avere n_states={self.n_states} colonne, ricevuto {x.shape[1]}"
+                f"x must have n_states={self.n_states} columns, got {x.shape[1]}"
             )
         if u is None:
             u = np.zeros((n_steps, self.n_inputs))
@@ -152,7 +152,7 @@ class SymbolicODEModel(ODEModel):
                 u = u.reshape(-1, 1)
             if u.shape[0] != n_steps or u.shape[1] < self.n_inputs:
                 raise ValueError(
-                    f"u deve avere shape (n_steps, n_inputs)=({n_steps}, {self.n_inputs})"
+                    f"u must have shape (n_steps, n_inputs)=({n_steps}, {self.n_inputs})"
                 )
         dx_dt = _compute_dx_dt_central(t, x)
         X = _build_design_matrix(x, u, t, self.n_states, self.n_inputs)
@@ -160,12 +160,12 @@ class SymbolicODEModel(ODEModel):
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> "SymbolicODEModel":
         """
-        Apprende rhs da matrice di design e derivate.
+        Learn rhs from design matrix and derivatives.
 
         Args:
             X: features, shape (n_samples, n_states + n_inputs + 1),
-               colonne [x_0..x_{n_states-1}, u_0.., t].
-            y: derivate dx/dt, shape (n_samples, n_states).
+               columns [x_0..x_{n_states-1}, u_0.., t].
+            y: derivatives dx/dt, shape (n_samples, n_states).
 
         Returns:
             self.
@@ -173,11 +173,11 @@ class SymbolicODEModel(ODEModel):
         n_features = self.n_states + self.n_inputs + 1
         if X.shape[1] != n_features:
             raise ValueError(
-                f"X deve avere {n_features} colonne (stati + ingressi + t), ricevuto {X.shape[1]}"
+                f"X must have {n_features} columns (states + inputs + t), got {X.shape[1]}"
             )
         if y.shape[1] != self.n_states:
             raise ValueError(
-                f"y deve avere n_states={self.n_states} colonne, ricevuto {y.shape[1]}"
+                f"y must have n_states={self.n_states} columns, got {y.shape[1]}"
             )
         self._regressors = []
         for i in range(self.n_states):
@@ -190,10 +190,10 @@ class SymbolicODEModel(ODEModel):
         return self
 
     def rhs(self, x: np.ndarray, u: np.ndarray, t: float) -> np.ndarray:
-        """Termine destro ODE: dx/dt = rhs(x, u, t). Valuta le espressioni apprese."""
+        """ODE right-hand side: dx/dt = rhs(x, u, t). Evaluates learned expressions."""
         if not self._regressors:
             raise RuntimeError(
-                "SymbolicODEModel non ancora addestrato. Chiamare fit() o fit_from_timeseries()."
+                "SymbolicODEModel not yet trained. Call fit() or fit_from_timeseries()."
             )
         x = np.atleast_1d(x)
         u = np.atleast_1d(u)
@@ -214,8 +214,8 @@ class SymbolicODEModel(ODEModel):
 
     def get_expressions(self) -> List[str]:
         """
-        Restituisce le espressioni simboliche apprese per ogni componente di dx/dt.
-        Utile per interpretabilità (modello fisico "leggibile").
+        Return the learned symbolic expressions for each component of dx/dt.
+        Useful for interpretability (readable physics model).
         """
         if not self._regressors:
             return []

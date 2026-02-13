@@ -1,4 +1,4 @@
-"""Trasformazione di parametri stimati o residui in Health Indicators (HI)."""
+"""Transform estimated parameters or residuals into Health Indicators (HI)."""
 
 from typing import Any, Callable, Dict, Optional
 
@@ -9,8 +9,8 @@ from twinops.core.component import TwinComponent
 
 class HealthIndicator(TwinComponent):
     """
-    Trasforma stato stimato, parametri o anomaly in un Health Indicator scalare.
-    HI in [0, 1] o in scala libera: 1 = salute piena, 0 = guasto.
+    Transforms estimated state, parameters or anomaly into a scalar Health Indicator.
+    HI in [0, 1] or free scale: 1 = full health, 0 = failure.
     """
 
     def __init__(
@@ -20,22 +20,22 @@ class HealthIndicator(TwinComponent):
     ) -> None:
         """
         Args:
-            fn: (state, anomaly) -> HI. Se None, usa stato o anomaly di default.
-            state_index: se fn è None, HI = 1 - clip(state[state_index]) o da anomaly.
+            fn: (state, anomaly) -> HI. If None, use default from state or anomaly.
+            state_index: if fn is None, HI = 1 - clip(state[state_index]) or from anomaly.
         """
         self._fn = fn
         self._state_index = state_index if state_index is not None else 0
         self._last_anomaly: float = 0.0
 
     def _default_hi(self, state: np.ndarray, anomaly: float) -> float:
-        """HI semplice: 1 / (1 + anomaly) o da componente di stato (es. parametro degradante)."""
+        """Simple HI: 1 / (1 + anomaly) or from state component (e.g. degrading parameter)."""
         if state.size > self._state_index:
-            # Parametro di degradazione nello stato: più è alto, più HI scende
+            # Degradation parameter in state: higher value -> lower HI
             deg = float(np.clip(state[self._state_index], 0, 2))
             hi = max(0.0, 1.0 - deg / 2.0)
         else:
             hi = 1.0
-        # Penalizza con anomaly
+        # Penalize with anomaly
         hi = hi / (1.0 + 0.1 * anomaly)
         return float(np.clip(hi, 0.0, 1.0))
 

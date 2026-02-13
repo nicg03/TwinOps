@@ -1,4 +1,4 @@
-"""Extended Kalman Filter per stima stato e parametri degradanti."""
+"""Extended Kalman Filter for state and degrading parameter estimation."""
 
 from typing import Any, Callable, Dict, Optional
 
@@ -9,8 +9,8 @@ from twinops.core.component import TwinComponent
 
 class EKF(TwinComponent):
     """
-    EKF discreto: prediction con modello (fisica + eventuale residuo),
-    update con misura. Supporta stima stato e parametri (stato esteso).
+    Discrete EKF: prediction with model (physics + optional residual),
+    update with measurement. Supports state and parameter estimation (extended state).
     """
 
     def __init__(
@@ -25,13 +25,13 @@ class EKF(TwinComponent):
     ) -> None:
         """
         Args:
-            state_dim: dimensione stato (eventualmente esteso con parametri)
-            meas_dim: dimensione misura
-            f: modello di transizione x_{k+1} = f(x_k, u_k, dt). Se None, identity.
-            h: modello di misura y = h(x). Se None, prime meas_dim componenti di x.
-            Q: covarianza rumore processo (state_dim x state_dim)
-            R: covarianza rumore misura (meas_dim x meas_dim)
-            P0: covarianza iniziale (state_dim x state_dim)
+            state_dim: state dimension (possibly extended with parameters)
+            meas_dim: measurement dimension
+            f: transition model x_{k+1} = f(x_k, u_k, dt). If None, identity.
+            h: measurement model y = h(x). If None, first meas_dim components of x.
+            Q: process noise covariance (state_dim x state_dim)
+            R: measurement noise covariance (meas_dim x meas_dim)
+            P0: initial covariance (state_dim x state_dim)
         """
         self.state_dim = state_dim
         self.meas_dim = meas_dim
@@ -49,13 +49,13 @@ class EKF(TwinComponent):
             x_pred = np.atleast_1d(self._f(x, u, dt))
         else:
             x_pred = np.asarray(x, dtype=float).copy()
-        # Linearizzazione F = I se f non fornita; altrimenti approssimazione numerica
+        # Linearization: F = I if f not provided; otherwise numerical approximation
         F = self._jacobian_f(x, u, dt) if self._f is not None else np.eye(self.state_dim)
         P_pred = F @ self._P @ F.T + self.Q
         return x_pred, P_pred
 
     def _jacobian_f(self, x: np.ndarray, u: np.ndarray, dt: float, eps: float = 1e-6) -> np.ndarray:
-        """Jacobiano di f rispetto a x (approssimazione numerica)."""
+        """Jacobian of f w.r.t. x (numerical approximation)."""
         x = np.atleast_1d(x)
         f0 = self._f(x, u, dt)
         F = np.zeros((self.state_dim, self.state_dim))
@@ -66,7 +66,7 @@ class EKF(TwinComponent):
         return F
 
     def _jacobian_h(self, x: np.ndarray, eps: float = 1e-6) -> np.ndarray:
-        """Jacobiano di h rispetto a x."""
+        """Jacobian of h w.r.t. x."""
         x = np.atleast_1d(x)
         h0 = np.atleast_1d(self._h(x))
         H = np.zeros((self.meas_dim, self.state_dim))

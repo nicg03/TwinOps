@@ -1,4 +1,4 @@
-"""Test per SymbolicODEModel (richiede gplearn, skip se non installato)."""
+"""Tests for SymbolicODEModel (requires gplearn, skipped if not installed)."""
 
 import numpy as np
 import pytest
@@ -9,13 +9,13 @@ from twinops.physics import SymbolicODEModel, FirstOrderLag, RK4Integrator
 
 
 def test_symbolic_ode_model_fit_from_timeseries_and_step() -> None:
-    """Genera dati da FirstOrderLag, fit SymbolicODEModel, verifica step."""
+    """Generate data from FirstOrderLag, fit SymbolicODEModel, verify step."""
     tau = 1.0
     dt = 0.05
     n_steps = 200
     t = np.arange(n_steps + 1) * dt
-    u = 0.5 + 0.3 * np.sin(t)  # ingresso
-    # Simula FirstOrderLag: dx/dt = (u - x) / tau
+    u = 0.5 + 0.3 * np.sin(t)  # input
+    # Simulate FirstOrderLag: dx/dt = (u - x) / tau
     physics_true = FirstOrderLag(tau=tau)
     x0 = np.array([0.0])
     x_vals = [x0.copy()]
@@ -36,28 +36,28 @@ def test_symbolic_ode_model_fit_from_timeseries_and_step() -> None:
     )
     model.fit_from_timeseries(t, x_arr, u_arr)
 
-    # Deve avere regressors e rhs deve essere chiamabile
+    # Must have regressors and rhs must be callable
     assert len(model._regressors) == 1
     rhs = model.rhs(np.array([x_arr[100, 0]]), np.array([u[100]]), t[100])
     assert rhs.shape == (1,)
     assert np.isfinite(rhs[0])
 
-    # step deve avanzare lo stato
+    # step must advance the state
     out = model.step(state=np.array([0.5]), u=np.array([0.5]), dt=dt)
     assert "state" in out and "output" in out
     assert out["state"].shape == (1,)
     assert np.isfinite(out["state"][0])
 
-    # get_expressions restituisce stringhe
+    # get_expressions returns strings
     exprs = model.get_expressions()
     assert len(exprs) == 1
     assert isinstance(exprs[0], str)
 
 
 def test_symbolic_ode_model_fit_direct() -> None:
-    """Fit con X, y diretti (senza serie temporale)."""
+    """Fit with direct X, y (without time series)."""
     n = 100
-    # dx/dt = -x + u (primo ordine)
+    # dx/dt = -x + u (first order)
     X = np.hstack([
         np.random.randn(n, 1),
         np.random.randn(n, 1),

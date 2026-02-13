@@ -1,4 +1,4 @@
-"""Wrapper per modelli PyTorch usati come correttori del modello fisico (residual learning)."""
+"""Wrapper for PyTorch models used as correctors of the physics model (residual learning)."""
 
 from typing import Any, Dict, Optional, Union
 
@@ -10,8 +10,8 @@ from twinops.core.component import TwinComponent
 
 class TorchResidualModel(TwinComponent):
     """
-    Adatta un nn.Module PyTorch all'interfaccia TwinComponent.
-    Lo step riceve stato e ingresso, restituisce una correzione da sommare allo stato predetto.
+    Adapts a PyTorch nn.Module to the TwinComponent interface.
+    Step receives state and input, returns a correction to add to the predicted state.
     """
 
     def __init__(
@@ -23,10 +23,10 @@ class TorchResidualModel(TwinComponent):
     ) -> None:
         """
         Args:
-            model: modulo che prende (state, u) e restituisce correzione (stesso shape di state).
-            state_dim: dimensione dello stato.
-            input_dim: dimensione dell'ingresso.
-            device: device PyTorch (default: cpu).
+            model: module that takes (state, u) and returns correction (same shape as state).
+            state_dim: state dimension.
+            input_dim: input dimension.
+            device: PyTorch device (default: cpu).
         """
         self.model = model
         self.state_dim = state_dim
@@ -36,7 +36,7 @@ class TorchResidualModel(TwinComponent):
         self.model.eval()
 
     def initialize(self, **kwargs: Any) -> None:
-        """Nessuna inizializzazione particolare per il modello."""
+        """No special initialization for the model."""
         self.model.eval()
 
     def step(
@@ -51,7 +51,7 @@ class TorchResidualModel(TwinComponent):
         with torch.no_grad():
             x = torch.from_numpy(np.atleast_1d(state).astype(np.float32)).unsqueeze(0).to(self.device)
             u_t = torch.from_numpy(np.atleast_1d(u).astype(np.float32)).unsqueeze(0).to(self.device)
-            # Assicura dimensioni corrette (padding se necessario)
+            # Ensure correct dimensions (padding if needed)
             if x.shape[1] != self.state_dim:
                 pad = torch.zeros(1, self.state_dim - x.shape[1], device=self.device)
                 x = torch.cat([x, pad], dim=1)
@@ -60,7 +60,7 @@ class TorchResidualModel(TwinComponent):
                 u_t = torch.cat([u_t, pad], dim=1)
             correction = self.model(x, u_t)
             correction_np = correction.squeeze(0).cpu().numpy()
-            # Ritorna solo le prime state_dim componenti se il modello restituisce di più
+            # Return only the first state_dim components if the model returns more
             if correction_np.size > self.state_dim:
                 correction_np = correction_np[: self.state_dim]
             elif correction_np.size < self.state_dim:

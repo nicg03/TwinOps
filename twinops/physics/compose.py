@@ -1,8 +1,8 @@
 """
-Composizione di modelli fisici: Serie e Parallelo.
+Physics model composition: Series and Parallel.
 
-Permette di costruire twin complessi combinando ODEModel (o TwinComponent
-con step/initialize) senza riscrivere le equazioni.
+Allows building complex twins by combining ODEModel (or TwinComponent
+with step/initialize) without rewriting equations.
 """
 
 from typing import Any, Callable, Dict, Optional, Union
@@ -15,17 +15,17 @@ from twinops.core.component import TwinComponent
 def _ensure_1d(a: Union[list, np.ndarray], name: str) -> np.ndarray:
     out = np.atleast_1d(np.asarray(a, dtype=float))
     if out.ndim != 1:
-        raise ValueError(f"{name} deve essere 1D, ricevuto shape {out.shape}")
+        raise ValueError(f"{name} must be 1D, got shape {out.shape}")
     return out
 
 
 class SeriesModel(TwinComponent):
     """
-    Due modelli in serie: uscita del primo è ingresso del secondo.
+    Two models in series: first model's output is second model's input.
 
-    Stato composto: x = [x1, x2] con x1 di dimensione state_dim1, x2 di state_dim2.
-    Ingresso esterno u va al primo modello; u2 = connection_fn(y1, u) va al secondo.
-    Default connection_fn: u2 = y1 (il secondo riceve l'uscita del primo).
+    Composite state: x = [x1, x2] with x1 of dimension state_dim1, x2 of state_dim2.
+    External input u goes to first model; u2 = connection_fn(y1, u) goes to second.
+    Default connection_fn: u2 = y1 (second receives first's output).
     """
 
     def __init__(
@@ -38,10 +38,10 @@ class SeriesModel(TwinComponent):
     ) -> None:
         """
         Args:
-            model1: primo modello (ingresso u, uscita y1).
-            model2: secondo modello (ingresso u2, uscita y2).
-            state_dim1: dimensione stato di model1.
-            state_dim2: dimensione stato di model2.
+            model1: first model (input u, output y1).
+            model2: second model (input u2, output y2).
+            state_dim1: state dimension of model1.
+            state_dim2: state dimension of model2.
             connection_fn: (y1, u) -> u2. Default: u2 = y1.
         """
         self.model1 = model1
@@ -57,8 +57,8 @@ class SeriesModel(TwinComponent):
             state = _ensure_1d(state, "state")
             if len(state) != self.state_dim1 + self.state_dim2:
                 raise ValueError(
-                    f"state deve avere lunghezza {self.state_dim1 + self.state_dim2}, "
-                    f"ricevuto {len(state)}"
+                    f"state must have length {self.state_dim1 + self.state_dim2}, "
+                    f"got {len(state)}"
                 )
             x1 = state[: self.state_dim1]
             x2 = state[self.state_dim1 :]
@@ -81,8 +81,8 @@ class SeriesModel(TwinComponent):
         u_arr = _ensure_1d(u, "u")
         if len(state) != self.state_dim1 + self.state_dim2:
             raise ValueError(
-                f"state deve avere lunghezza {self.state_dim1 + self.state_dim2}, "
-                f"ricevuto {len(state)}"
+                f"state must have length {self.state_dim1 + self.state_dim2}, "
+                f"got {len(state)}"
             )
         x1 = state[: self.state_dim1]
         x2 = state[self.state_dim1 :]
@@ -110,9 +110,9 @@ class SeriesModel(TwinComponent):
 
 class ParallelModel(TwinComponent):
     """
-    Due modelli in parallelo: stesso ingresso u a entrambi, stato e uscita concatenati.
+    Two models in parallel: same input u to both, state and output concatenated.
 
-    Stato composto: x = [x1, x2]. Output: y = [y1, y2].
+    Composite state: x = [x1, x2]. Output: y = [y1, y2].
     """
 
     def __init__(
@@ -124,10 +124,10 @@ class ParallelModel(TwinComponent):
     ) -> None:
         """
         Args:
-            model1: primo modello.
-            model2: secondo modello.
-            state_dim1: dimensione stato di model1.
-            state_dim2: dimensione stato di model2.
+            model1: first model.
+            model2: second model.
+            state_dim1: state dimension of model1.
+            state_dim2: state dimension of model2.
         """
         self.model1 = model1
         self.model2 = model2
@@ -141,8 +141,8 @@ class ParallelModel(TwinComponent):
             state = _ensure_1d(state, "state")
             if len(state) != self.state_dim1 + self.state_dim2:
                 raise ValueError(
-                    f"state deve avere lunghezza {self.state_dim1 + self.state_dim2}, "
-                    f"ricevuto {len(state)}"
+                    f"state must have length {self.state_dim1 + self.state_dim2}, "
+                    f"got {len(state)}"
                 )
             x1 = state[: self.state_dim1]
             x2 = state[self.state_dim1 :]
@@ -165,8 +165,8 @@ class ParallelModel(TwinComponent):
         u_arr = _ensure_1d(u, "u")
         if len(state) != self.state_dim1 + self.state_dim2:
             raise ValueError(
-                f"state deve avere lunghezza {self.state_dim1 + self.state_dim2}, "
-                f"ricevuto {len(state)}"
+                f"state must have length {self.state_dim1 + self.state_dim2}, "
+                f"got {len(state)}"
             )
         x1 = state[: self.state_dim1]
         x2 = state[self.state_dim1 :]

@@ -1,9 +1,9 @@
 """
-FMI/FMU: import/export modelli per co-simulazione industriale.
-Fase successiva: da implementare.
+FMI/FMU: import/export models for industrial co-simulation.
+Next phase: to be implemented.
 """
 
-# Placeholder per integrazione futura con Functional Mock-up Interface (FMI)
-# e Functional Mock-up Units (FMU).
+# Placeholder for future integration with Functional Mock-up Interface (FMI)
+# and Functional Mock-up Units (FMU).
 
 __all__: list = []

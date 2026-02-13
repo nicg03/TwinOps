@@ -1,8 +1,8 @@
 """
-Modello base a equazioni differenziali ordinarie: dx/dt = rhs(x, u, t).
+Base model for ordinary differential equations: dx/dt = rhs(x, u, t).
 
-Usa un integratore (da physics.integrators) per avanzare nel tempo.
-Il metodo rhs() va implementato nelle sottoclassi.
+Uses an integrator (from physics.integrators) to advance in time.
+Subclasses must implement rhs().
 """
 
 from typing import Any, Callable, Dict, Optional
@@ -16,14 +16,14 @@ from twinops.physics.integrators import RK4Integrator
 
 class ODEModel(TwinComponent):
     """
-    Classe base per modelli ODE: dx/dt = rhs(x, u, t).
-    Sottoclassi implementano rhs(); l'integratore è configurabile.
+    Base class for ODE models: dx/dt = rhs(x, u, t).
+    Subclasses implement rhs(); the integrator is configurable.
     """
 
     def __init__(self, integrator: Optional[Any] = None) -> None:
         """
         Args:
-            integrator: oggetto con metodo step(f, x, u, t, dt). Default: RK4Integrator.
+            integrator: object with method step(f, x, u, t, dt). Default: RK4Integrator.
         """
         self.integrator = integrator or RK4Integrator()
         self._t: float = 0.0
@@ -31,22 +31,22 @@ class ODEModel(TwinComponent):
 
     def rhs(self, x: np.ndarray, u: np.ndarray, t: float) -> np.ndarray:
         """
-        Termine destro dell'ODE: dx/dt = rhs(x, u, t).
-        Da implementare nelle sottoclassi.
+        ODE right-hand side: dx/dt = rhs(x, u, t).
+        To be implemented in subclasses.
         """
-        raise NotImplementedError("Sottoclassi devono implementare rhs(x, u, t).")
+        raise NotImplementedError("Subclasses must implement rhs(x, u, t).")
 
     def output(self, x: np.ndarray, u: np.ndarray) -> np.ndarray:
         """
-        Uscita osservabile (misura) in funzione di stato e ingresso.
-        Default: ritorna lo stato; override o set_output_fn per output parziale.
+        Observable output (measurement) as a function of state and input.
+        Default: returns state; override or set_output_fn for partial output.
         """
         if self._output_fn is not None:
             return self._output_fn(x, u)
         return np.asarray(x, dtype=float)
 
     def set_output_fn(self, fn: Callable[[np.ndarray, np.ndarray], np.ndarray]) -> None:
-        """Imposta una funzione custom per l'output (misura)."""
+        """Set a custom function for output (measurement)."""
         self._output_fn = fn
 
     def initialize(self, **kwargs: Any) -> None:

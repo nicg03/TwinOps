@@ -1,4 +1,4 @@
-"""Verifica che i moduli principali siano importabili."""
+"""Verify that main modules are importable."""
 
 import pytest
 

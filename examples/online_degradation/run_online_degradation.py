@@ -1,12 +1,12 @@
 """
-Esempio complesso: pipeline online con misure simulate e degradazione.
+Complex example: online pipeline with simulated measurements and degradation.
 
-Verifica l'utilità del codice TwinOps con:
-- Simulazione "online": misure generate step-by-step come da sensori reali.
-- Processo con degradazione: dopo N step un guasto riduce l'efficienza,
-  le misure divergono dal modello → anomaly sale, HI scende, RUL si aggiorna.
-- AnomalyDetector (EMA/CUSUM) per allarmi adattivi sull'anomaly score.
-- Export CSV e grafici per analisi.
+Verifies TwinOps with:
+- "Online" simulation: measurements generated step-by-step as from real sensors.
+- Process with degradation: after N steps a fault reduces efficiency,
+  measurements diverge from the model → anomaly rises, HI drops, RUL updates.
+- AnomalyDetector (EMA/CUSUM) for adaptive alarms on anomaly score.
+- CSV and plot export for analysis.
 """
 
 import sys
@@ -24,11 +24,11 @@ from twinops.health import HealthIndicator, SimpleRUL
 
 
 # ---------------------------------------------------------------------------
-# Modello fisico: pompa [portata, pressione], ingresso [velocità]
+# Physics model: pump [flow rate, pressure], input [speed]
 # ---------------------------------------------------------------------------
 
 class PumpPhysics(ODEModel):
-    """Pompa: stato [portata q, pressione p], ingresso [velocità omega]."""
+    """Pump: state [flow q, pressure p], input [speed omega]."""
 
     def rhs(self, x: np.ndarray, u: np.ndarray, t: float) -> np.ndarray:
         q, p = x[0], x[1]
@@ -39,7 +39,7 @@ class PumpPhysics(ODEModel):
 
 
 # ---------------------------------------------------------------------------
-# Generatore di misure "online" con degradazione simulata
+# "Online" measurement generator with simulated degradation
 # ---------------------------------------------------------------------------
 
 def generate_online_measurements(
@@ -55,9 +55,9 @@ def generate_online_measurements(
     seed: int = 42,
 ):
     """
-    Genera (u_t, y_t) step-by-step come da sensori online.
-    Dopo fault_start_step simula un guasto: efficienza ridotta → portata misurata minore.
-    Yields (u_t, y_t) per ogni step.
+    Generate (u_t, y_t) step-by-step as from online sensors.
+    After fault_start_step simulates a fault: reduced efficiency → lower measured flow.
+    Yields (u_t, y_t) for each step.
     """
     rng = np.random.default_rng(seed)
     x = np.asarray(x0, dtype=float).copy()
@@ -66,14 +66,14 @@ def generate_online_measurements(
         out = physics.step(state=x, u=u_t, dt=dt)
         x = out["state"]
         y_nominal = out["output"]
-        # Degradazione: dopo fault_start_step la "rete" perde (efficienza < 1)
+        # Degradation: after fault_start_step the "system" loses (efficiency < 1)
         eff = efficiency_after_fault if k >= fault_start_step else 1.0
         y_t = eff * y_nominal + rng.standard_normal(y_nominal.shape) * meas_noise_std
         yield u_t, np.atleast_1d(y_t)
 
 
 # ---------------------------------------------------------------------------
-# Main: twin + pipeline online + AnomalyDetector + export
+# Main: twin + online pipeline + AnomalyDetector + export
 # ---------------------------------------------------------------------------
 
 def main() -> None:
@@ -84,7 +84,7 @@ def main() -> None:
     fault_start = 400
     efficiency_fault = 0.72
 
-    # Twin: fisica + EKF + health + RUL
+    # Twin: physics + EKF + health + RUL
     physics = PumpPhysics(integrator=RK4Integrator())
     physics.set_output_fn(lambda x, u: np.array([x[0]]))
 
@@ -115,7 +115,7 @@ def main() -> None:
     )
 
     history = TwinHistory()
-    # Fisica separata per simulare il "processo reale" (il twin usa `physics`)
+    # Separate physics to simulate the "real process" (twin uses `physics`)
     physics_truth = PumpPhysics(integrator=RK4Integrator())
     physics_truth.set_output_fn(lambda x, u: np.array([x[0]]))
 
@@ -128,15 +128,15 @@ def main() -> None:
         efficiency_after_fault=efficiency_fault,
     )
 
-    print("Pipeline online: twin + misure simulate con degradazione")
-    print(f"  Step 0-{fault_start}: regime normale")
-    print(f"  Step {fault_start}-{n_steps}: guasto simulato (efficienza {efficiency_fault})")
+    print("Online pipeline: twin + simulated measurements with degradation")
+    print(f"  Step 0-{fault_start}: normal regime")
+    print(f"  Step {fault_start}-{n_steps}: simulated fault (efficiency {efficiency_fault})")
     print("Running...")
 
     for step, (u_t, y_t) in enumerate(stream):
         result = twin.step(u=u_t, measurement=y_t)
 
-        # AnomalyDetector: aggiorna EMA e CUSUM sull'anomaly score
+        # AnomalyDetector: update EMA and CUSUM on anomaly score
         score = anomaly_detector.anomaly_score(np.array([result.anomaly]))
         ema = anomaly_detector.update_ema(result.anomaly)
         cusum_p, cusum_n = anomaly_detector.update_cusum(result.anomaly - ema)
@@ -154,19 +154,19 @@ def main() -> None:
             cusum_neg=cusum_n,
         )
 
-        # Allarme CUSUM
+        # CUSUM alarm
         if cusum_p >= anomaly_detector.cusum_threshold or cusum_n >= anomaly_detector.cusum_threshold:
             print(f"  [step {step}] ALERT CUSUM: anomaly={result.anomaly:.4f} ema={ema:.4f} "
                   f"cusum_pos={cusum_p:.3f} cusum_neg={cusum_n:.3f} HI={result.health_indicator:.3f} RUL={result.rul}")
 
-        # Log degradazione attesa
+        # Log expected degradation
         if step == fault_start:
-            print(f"  [step {step}] Ingresso guasto simulato (efficienza -> {efficiency_fault})")
+            print(f"  [step {step}] Simulated fault applied (efficiency -> {efficiency_fault})")
         if step == fault_start + 50 and result.rul is not None:
-            print(f"  [step {step}] RUL stimata: {result.rul:.2f} s")
+            print(f"  [step {step}] Estimated RUL: {result.rul:.2f} s")
 
-    print(f"Steps: {len(history)}, stato finale: {twin.state}")
-    print("Export CSV e grafici...")
+    print(f"Steps: {len(history)}, final state: {twin.state}")
+    print("Exporting CSV and plots...")
 
     # Export CSV
     out_dir = Path(__file__).resolve().parent
@@ -174,18 +174,18 @@ def main() -> None:
     history.to_csv(csv_path, delimiter=",")
     print(f"  CSV: {csv_path}")
 
-    # Grafici (opzionale)
+    # Plots (optional)
     try:
         import matplotlib.pyplot as plt
         _plot_results(history, fault_start, out_dir)
     except ImportError:
-        print("  (matplotlib non disponibile, grafici saltati)")
+        print("  (matplotlib not available, plots skipped)")
 
-    print("Fatto.")
+    print("Done.")
 
 
 def _plot_results(history: TwinHistory, fault_start: int, out_dir: Path) -> None:
-    """Genera grafici di verifica della pipeline."""
+    """Generate pipeline verification plots."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -195,12 +195,12 @@ def _plot_results(history: TwinHistory, fault_start: int, out_dir: Path) -> None
 
     fig, axes = plt.subplots(4, 1, sharex=True, figsize=(10, 10))
 
-    # Stato stimato
+    # Estimated state
     ax = axes[0]
-    ax.plot(steps, data["state_0"], label="portata stimata")
-    ax.plot(steps, data["state_1"], label="pressione stimata")
-    ax.axvline(fault_start, color="gray", linestyle="--", alpha=0.7, label="inizio guasto")
-    ax.set_ylabel("Stato")
+    ax.plot(steps, data["state_0"], label="estimated flow")
+    ax.plot(steps, data["state_1"], label="estimated pressure")
+    ax.axvline(fault_start, color="gray", linestyle="--", alpha=0.7, label="fault start")
+    ax.set_ylabel("State")
     ax.legend(loc="upper right", fontsize=8)
     ax.grid(True, alpha=0.3)
 
@@ -233,7 +233,7 @@ def _plot_results(history: TwinHistory, fault_start: int, out_dir: Path) -> None
     ax.legend(loc="upper right", fontsize=8)
     ax.grid(True, alpha=0.3)
 
-    plt.suptitle("Pipeline online: degradazione simulata (TwinOps)")
+    plt.suptitle("Online pipeline: simulated degradation (TwinOps)")
     plt.tight_layout()
     plot_path = out_dir / "online_degradation_plots.png"
     plt.savefig(plot_path, dpi=120)

@@ -1,15 +1,15 @@
 """
-Modelli fisici per il digital twin.
+Physics models for the digital twin.
 
-Gerarchia:
-  - integrators: integrazione numerica (Euler, Heun, Midpoint, RK4, BackwardEuler)
-  - ode: modello base ODE (ODEModel)
-  - symbolic: modello ODE appreso da dati (SymbolicODEModel, richiede gplearn)
-  - compose: composizione di modelli (SeriesModel, ParallelModel)
-  - library: modelli parametrici pronti (FirstOrderLag, DoubleIntegrator, ...)
+Hierarchy:
+  - integrators: numerical integration (Euler, Heun, Midpoint, RK4, BackwardEuler)
+  - ode: base ODE model (ODEModel)
+  - symbolic: ODE model learned from data (SymbolicODEModel, requires gplearn)
+  - compose: model composition (SeriesModel, ParallelModel)
+  - library: ready-made parametric models (FirstOrderLag, DoubleIntegrator, ...)
 """
 
-# --- Integratori (livello numerico) ---
+# --- Integrators (numerical level) ---
 from twinops.physics.integrators import (
     BackwardEulerIntegrator,
     EulerIntegrator,
@@ -23,16 +23,16 @@ from twinops.physics.integrators import (
     rk4_step,
 )
 
-# --- Modello base ODE ---
+# --- Base ODE model ---
 from twinops.physics.ode import ODEModel
 
-# --- Symbolic (modello fisico da dati) ---
+# --- Symbolic (physics model from data) ---
 from twinops.physics.symbolic import SymbolicODEModel
 
-# --- Composizione ---
+# --- Composition ---
 from twinops.physics.compose import ParallelModel, SeriesModel
 
-# --- Library (modelli parametrici) ---
+# --- Library (parametric models) ---
 from twinops.physics.library import (
     DoubleIntegrator,
     FirstOrderLag,
@@ -58,7 +58,7 @@ __all__ = [
     "ODEModel",
     # Symbolic
     "SymbolicODEModel",
-    # Composizione
+    # Composition
     "SeriesModel",
     "ParallelModel",
     # Library

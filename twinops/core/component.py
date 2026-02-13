@@ -1,4 +1,4 @@
-"""Interfaccia base per i componenti del digital twin."""
+"""Base interface for digital twin components."""
 
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
@@ -8,13 +8,13 @@ import numpy as np
 
 class TwinComponent(ABC):
     """
-    Interfaccia base per tutti i componenti del twin:
-    fisica, modello residuale, estimatore, health/RUL.
+    Base interface for all twin components:
+    physics, residual model, estimator, health/RUL.
     """
 
     @abstractmethod
     def initialize(self, **kwargs: Any) -> None:
-        """Inizializza il componente (stato, parametri)."""
+        """Initialize the component (state, parameters)."""
         pass
 
     @abstractmethod
@@ -28,23 +28,23 @@ class TwinComponent(ABC):
         **kwargs: Any,
     ) -> Dict[str, Any]:
         """
-        Esegue un passo temporale.
+        Execute one time step.
 
         Args:
-            state: stato corrente (o stimato)
-            u: ingresso di controllo
-            dt: passo temporale
-            measurement: misura disponibile (opzionale, per estimator)
-            **kwargs: argomenti aggiuntivi per estensioni
+            state: current (or estimated) state
+            u: control input
+            dt: time step
+            measurement: available measurement (optional, for estimator)
+            **kwargs: additional arguments for extensions
 
         Returns:
-            Dizionario con output del componente (chiavi dipendono dal tipo).
+            Dictionary with component output (keys depend on type).
         """
         pass
 
     def state_dict(self) -> Dict[str, Any]:
         """
-        Restituisce lo stato interno del componente per checkpoint/serializzazione.
-        Override per componenti stateful.
+        Return the component's internal state for checkpointing/serialization.
+        Override for stateful components.
         """
         return {}

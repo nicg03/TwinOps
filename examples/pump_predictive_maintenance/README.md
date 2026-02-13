@@ -1,13 +1,13 @@
-# Esempio: manutenzione predittiva pompa
+# Example: pump predictive maintenance
 
-Esempio completo (da completare con dati e training):
+Complete example (to be completed with data and training):
 
-1. **Generazione dati**: simulazione ODE pompa + rumore
-2. **Training**: modello ML residuale (opzionale)
-3. **Online**: TwinSystem con physics + EKF (+ residual) + health + RUL
-4. **Anomaly detection e RUL**: soglie e allarmi
+1. **Data generation**: pump ODE simulation + noise
+2. **Training**: residual ML model (optional)
+3. **Online**: TwinSystem with physics + EKF (+ residual) + health + RUL
+4. **Anomaly detection and RUL**: thresholds and alarms
 
-Esegui lo script minimo:
+Run the minimal script:
 
 ```bash
 python run_pump_twin.py

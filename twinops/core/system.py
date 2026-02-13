@@ -1,4 +1,4 @@
-"""Orchestratore del digital twin: loop temporale e integrazione componenti."""
+"""Digital twin orchestrator: time loop and component integration."""
 
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Union
@@ -11,7 +11,7 @@ from twinops.core.history import TwinHistory
 
 @dataclass
 class StepResult:
-    """Risultato di un passo del twin: stato stimato, anomaly, RUL, ecc."""
+    """Result of one twin step: estimated state, anomaly, RUL, etc."""
 
     state: np.ndarray
     covariance: Optional[np.ndarray] = None
@@ -23,8 +23,8 @@ class StepResult:
 
 class TwinSystem:
     """
-    Orchestratore del digital twin.
-    Gestisce il loop temporale: fisica -> residuo ML -> estimatore -> health/RUL.
+    Digital twin orchestrator.
+    Handles the time loop: physics -> ML residual -> estimator -> health/RUL.
     """
 
     def __init__(
@@ -41,15 +41,15 @@ class TwinSystem:
     ) -> None:
         """
         Args:
-            physics: modello fisico (ODE o FMU)
-            estimator: filtro per stima stato/parametri (es. EKF)
-            residual: correttore ML (opzionale)
-            health: calcolo health indicator (opzionale)
-            rul: stima RUL (opzionale)
-            dt: passo temporale
-            state_dim: dimensione stato (per default da physics)
-            input_dim: dimensione ingresso
-            meas_dim: dimensione misura
+            physics: physics model (ODE or FMU)
+            estimator: filter for state/parameter estimation (e.g. EKF)
+            residual: ML corrector (optional)
+            health: health indicator computation (optional)
+            rul: RUL estimation (optional)
+            dt: time step
+            state_dim: state dimension (default from physics)
+            input_dim: input dimension
+            meas_dim: measurement dimension
         """
         self.physics = physics
         self.estimator = estimator
@@ -69,7 +69,7 @@ class TwinSystem:
         x0: Union[List[float], np.ndarray],
         **kwargs: Any,
     ) -> None:
-        """Inizializza il twin con stato iniziale x0."""
+        """Initialize the twin with initial state x0."""
         self._x = np.atleast_1d(np.asarray(x0, dtype=float))
         self._time = 0.0
         self.physics.initialize(state=self._x.copy(), **kwargs)
@@ -89,18 +89,18 @@ class TwinSystem:
         **kwargs: Any,
     ) -> StepResult:
         """
-        Esegue un passo: predizione fisica (+ residuo), update con misura, anomaly/RUL.
+        Execute one step: physics prediction (+ residual), update with measurement, anomaly/RUL.
 
         Args:
-            u: ingresso di controllo
-            measurement: misura dai sensori (opzionale)
-            **kwargs: argomenti aggiuntivi per i componenti
+            u: control input
+            measurement: sensor measurement (optional)
+            **kwargs: additional arguments for components
 
         Returns:
-            StepResult con stato stimato, anomaly score, RUL, ecc.
+            StepResult with estimated state, anomaly score, RUL, etc.
         """
         if not self._initialized or self._x is None:
-            raise RuntimeError("Twin non inizializzato: chiamare initialize(x0) prima di step().")
+            raise RuntimeError("Twin not initialized: call initialize(x0) before step().")
         u_arr = np.atleast_1d(np.asarray(u, dtype=float))
         meas = np.atleast_1d(np.asarray(measurement, dtype=float)) if measurement is not None else None
 
@@ -109,7 +109,7 @@ class TwinSystem:
         x_pred = physics_out.get("state", self._x.copy())
         y_physics = physics_out.get("output", np.array([]))
 
-        # 2) Residuo ML (correzione)
+        # 2) ML residual (correction)
         if self.residual is not None:
             res_out = self.residual.step(state=x_pred, u=u_arr, dt=self.dt, **kwargs)
             correction = res_out.get("correction", np.zeros_like(x_pred))
@@ -165,16 +165,16 @@ class TwinSystem:
 
     @property
     def state(self) -> Optional[np.ndarray]:
-        """Stato corrente stimato."""
+        """Current estimated state."""
         return self._x.copy() if self._x is not None else None
 
     @property
     def time(self) -> float:
-        """Tempo simulato corrente."""
+        """Current simulated time."""
         return self._time
 
     def state_dict(self) -> Dict[str, Any]:
-        """Stato completo del twin per checkpoint."""
+        """Full twin state for checkpointing."""
         return {
             "state": self._x.copy() if self._x is not None else None,
             "time": self._time,

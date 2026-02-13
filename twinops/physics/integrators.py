@@ -1,39 +1,39 @@
 """
-Integratori numerici per ODE: passo temporale x_{n+1} = step(f, x_n, u_n, t_n, dt).
+Numerical integrators for ODEs: time step x_{n+1} = step(f, x_n, u_n, t_n, dt).
 
-Livello numerico puro: nessuna dipendenza da TwinComponent.
-Interfaccia: step(f, x, u, t, dt) -> x_next.
+Pure numerical level: no dependency on TwinComponent.
+Interface: step(f, x, u, t, dt) -> x_next.
 """
 
 from typing import Callable, Optional
 
 import numpy as np
 
-# Tipo per il termine destro ODE: (x, u, t) -> dx/dt
+# Type for ODE right-hand side: (x, u, t) -> dx/dt
 RHS = Callable[[np.ndarray, np.ndarray, float], np.ndarray]
 
 
 def euler_step(f: RHS, x: np.ndarray, u: np.ndarray, t: float, dt: float) -> np.ndarray:
-    """Eulero esplicito, ordine 1: x_{n+1} = x_n + dt * f(x_n, u_n, t_n)."""
+    """Explicit Euler, order 1: x_{n+1} = x_n + dt * f(x_n, u_n, t_n)."""
     return x + dt * f(x, u, t)
 
 
 def heun_step(f: RHS, x: np.ndarray, u: np.ndarray, t: float, dt: float) -> np.ndarray:
-    """Heun (Eulero migliorato), ordine 2: predittore Eulero + correttore trapezio."""
+    """Heun (improved Euler), order 2: Euler predictor + trapezoidal corrector."""
     k1 = f(x, u, t)
     k2 = f(x + dt * k1, u, t + dt)
     return x + 0.5 * dt * (k1 + k2)
 
 
 def midpoint_step(f: RHS, x: np.ndarray, u: np.ndarray, t: float, dt: float) -> np.ndarray:
-    """Midpoint (RK2): valutazione al centro dell'intervallo."""
+    """Midpoint (RK2): evaluation at interval center."""
     k1 = f(x, u, t)
     k2 = f(x + 0.5 * dt * k1, u, t + 0.5 * dt)
     return x + dt * k2
 
 
 def rk4_step(f: RHS, x: np.ndarray, u: np.ndarray, t: float, dt: float) -> np.ndarray:
-    """Runge-Kutta 4, ordine 4."""
+    """Runge-Kutta 4, order 4."""
     k1 = f(x, u, t)
     k2 = f(x + 0.5 * dt * k1, u, t + 0.5 * dt)
     k3 = f(x + 0.5 * dt * k2, u, t + 0.5 * dt)
@@ -50,7 +50,7 @@ def backward_euler_step(
     max_iter: int = 10,
     tol: float = 1e-10,
 ) -> np.ndarray:
-    """Eulero implicito: x_{n+1} = x_n + dt * f(x_{n+1}, u, t+dt). Risolto con Newton."""
+    """Implicit Euler: x_{n+1} = x_n + dt * f(x_{n+1}, u, t+dt). Solved with Newton."""
     x_next = x + dt * f(x, u, t)
     for _ in range(max_iter):
         res = x_next - x - dt * f(x_next, u, t + dt)
@@ -72,7 +72,7 @@ def backward_euler_step(
 
 
 class EulerIntegrator:
-    """Integratore Eulero esplicito, ordine 1."""
+    """Explicit Euler integrator, order 1."""
 
     @staticmethod
     def step(f: RHS, x: np.ndarray, u: np.ndarray, t: float, dt: float) -> np.ndarray:
@@ -80,7 +80,7 @@ class EulerIntegrator:
 
 
 class HeunIntegrator:
-    """Integratore Heun, ordine 2."""
+    """Heun integrator, order 2."""
 
     @staticmethod
     def step(f: RHS, x: np.ndarray, u: np.ndarray, t: float, dt: float) -> np.ndarray:
@@ -88,7 +88,7 @@ class HeunIntegrator:
 
 
 class MidpointIntegrator:
-    """Integratore Midpoint (RK2)."""
+    """Midpoint integrator (RK2)."""
 
     @staticmethod
     def step(f: RHS, x: np.ndarray, u: np.ndarray, t: float, dt: float) -> np.ndarray:
@@ -96,7 +96,7 @@ class MidpointIntegrator:
 
 
 class RK4Integrator:
-    """Integratore Runge-Kutta 4, ordine 4."""
+    """Runge-Kutta 4 integrator, order 4."""
 
     @staticmethod
     def step(f: RHS, x: np.ndarray, u: np.ndarray, t: float, dt: float) -> np.ndarray:
@@ -104,7 +104,7 @@ class RK4Integrator:
 
 
 class BackwardEulerIntegrator:
-    """Integratore Eulero implicito (stabile per sistemi stiff)."""
+    """Implicit Euler integrator (stable for stiff systems)."""
 
     def __init__(self, max_iter: int = 10, tol: float = 1e-10) -> None:
         self.max_iter = max_iter
