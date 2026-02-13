@@ -59,8 +59,22 @@ TwinOps/
 │   ├── online_degradation/
 │   ├── symbolic_regression/
 │   └── neural_dynamics/
+├── docs/               # Sphinx documentation (see docs/README.rst)
 └── tests/
 ```
+
+---
+
+## 📖 Documentation
+
+API documentation is built with **Sphinx**. To build it locally:
+
+```bash
+pip install -e ".[docs]"
+sphinx-build -b html docs docs/_build
+```
+
+Then open `docs/_build/html/index.html` in a browser. See `docs/README.rst` for more options (e.g. `make -C docs html`).
 
 ---
 

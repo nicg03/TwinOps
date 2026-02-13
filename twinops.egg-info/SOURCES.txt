@@ -23,6 +23,7 @@ twinops/io/__init__.py
 twinops/io/serializers.py
 twinops/io/streams.py
 twinops/ml/__init__.py
+twinops/ml/dynamics.py
 twinops/ml/residual.py
 twinops/ml/training.py
 twinops/physics/__init__.py
@@ -30,5 +31,6 @@ twinops/physics/compose.py
 twinops/physics/fmi.py
 twinops/physics/integrators.py
 twinops/physics/library.py
+twinops/physics/neural_ode.py
 twinops/physics/ode.py
 twinops/physics/symbolic.py
