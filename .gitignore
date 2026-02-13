@@ -31,6 +31,8 @@ env/
 htmlcov/
 .tox/
 .nox/
+*.csv
+*.png
 
 # Jupyter
 .ipynb_checkpoints/
