@@ -76,6 +76,8 @@ sphinx-build -b html docs docs/_build
 
 Then open `docs/_build/html/index.html` in a browser. See `docs/README.rst` for more options (e.g. `make -C docs html`).
 
+To publish the docs online: push the repo to GitHub (or GitLab) and follow the **Publishing on Read the Docs** steps in `docs/README.rst`. The project includes a `.readthedocs.yaml` config so Read the Docs can build the docs automatically.
+
 ---
 
 ## 📦 Module overview (file by file)
