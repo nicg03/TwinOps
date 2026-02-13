@@ -24,6 +24,21 @@ def test_import_physics() -> None:
     assert RK4Integrator is not None
 
 
+def test_import_physics_neural_ode() -> None:
+    from twinops.physics import NeuralODEModel
+    # Can be None if torch not available
+    assert NeuralODEModel is None or callable(getattr(NeuralODEModel, "step", None)) or hasattr(NeuralODEModel, "rhs")
+
+
+def test_import_ml() -> None:
+    from twinops.ml import TorchResidualModel, NeuralDynamicsModel, train_residual, train_dynamics, train_neural_ode
+    assert TorchResidualModel is not None
+    assert NeuralDynamicsModel is not None
+    assert train_residual is not None
+    assert train_dynamics is not None
+    assert train_neural_ode is not None
+
+
 def test_import_estimation() -> None:
     from twinops.estimation import EKF, AnomalyDetector
     assert EKF is not None

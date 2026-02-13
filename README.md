@@ -47,14 +47,16 @@ TwinOps/
 ├── twinops/
 │   ├── __init__.py
 │   ├── core/           # system, component, signals, history
-│   ├── physics/        # ode, fmi (stub)
-│   ├── ml/             # residual, training
+│   ├── physics/        # ode, symbolic, neural_ode, compose, library
+│   ├── ml/             # residual, dynamics, training
 │   ├── estimation/     # ekf, residuals
 │   ├── health/         # indicators, rul
 │   └── io/             # streams, serializers
 ├── examples/
 │   ├── pump_predictive_maintenance/
-│   └── online_degradation/
+│   ├── online_degradation/
+│   ├── symbolic_regression/
+│   └── neural_dynamics/
 └── tests/
 ```
 
@@ -87,6 +89,22 @@ Physics models.
   Base class `ODEModel` and integrators (Euler, RK4).
   Differential equations of the physical system are defined here.
 
+- **symbolic.py**
+  `SymbolicODEModel`: ODE whose right-hand side is learned from data via
+  symbolic regression (gplearn). Optional dependency: `twinops[symbolic]`.
+
+- **neural_ode.py**
+  `NeuralODEModel`: ODE whose right-hand side is a neural network (`dx/dt = net(x, u, t)`).
+  Uses the same integrators and composition (Series/Parallel) as other ODE models.
+  Train with `twinops.ml.training.train_neural_ode()`.
+
+- **compose.py**
+  `SeriesModel` and `ParallelModel` to combine any `TwinComponent` (e.g. ODE + ODE).
+
+- **library.py**
+  Ready-made parametric ODE models: `FirstOrderLag`, `DoubleIntegrator`,
+  `MassSpringDamper`, `TankLevel`, `PumpLike`, `HarmonicOscillator`.
+
 - **fmi.py** *(next phase)*
   Import/export of FMI/FMU models for industrial co-simulation.
 
@@ -97,10 +115,21 @@ Machine learning.
 
 - **residual.py**
   Wrapper for PyTorch models used as **correctors** of the physics model
-  (residual learning).
+  (residual learning). Output is a correction added to the predicted state.
+
+- **dynamics.py**
+  `NeuralDynamicsModel`: discrete-time dynamics `x_{k+1} = net(x_k, u_k, dt)`.
+  Usable as **physics** in `TwinSystem` or in Series/Parallel.
+  Train with `twinops.ml.training.train_dynamics()`.
+  `default_dynamics_net()` builds a simple MLP for state transition.
 
 - **training.py**
-  Utilities for training surrogate and residual models.
+  Utilities for training:
+  - **train_residual**: residual corrector (state, u) → correction.
+  - **train_neural_ode**: Neural ODE rhs from (X, y) with X = [x, u, t], y = dx/dt.
+    Use `prepare_ode_data_from_timeseries(t, x, u)` to build (X, y) from time series.
+  - **train_dynamics**: discrete-time model (state, u, dt) → state_next.
+  - **compute_dx_dt_central**: time derivatives from trajectories (for ODE data).
 
 ---
 
@@ -152,6 +181,17 @@ Reproducible use cases.
   - AnomalyDetector (EMA/CUSUM) for adaptive alarms,
   - CSV export and plots for analysis.
 
+- **symbolic_regression/**
+  Learn physics from time series with `SymbolicODEModel` (gplearn), then use it
+  as physics in the twin. See `run_symbolic_ode.py` and `run_twin_symbolic.py`.
+
+- **neural_dynamics/**
+  Simulate a dynamical system with **neural networks**:
+  - **NeuralODEModel**: continuous dynamics, rhs = network, trained on (t, x, u) → dx/dt.
+  - **NeuralDynamicsModel**: discrete-time x_{k+1} = net(x_k, u_k, dt).
+  Run `python examples/neural_dynamics/run_neural_dynamics.py` to train both
+  on a harmonic oscillator and compare trajectories (true vs Neural ODE vs Neural Dynamics).
+
 ---
 
 ## 🚀 Minimal usage example
@@ -159,14 +199,14 @@ Reproducible use cases.
 Simplified example of online digital twin usage.
 
 ```python
-from twinops.core.system import TwinSystem
-from twinops.physics.ode import PumpPhysics
+from twinops.core import TwinSystem
+from twinops.physics import PumpLike
 from twinops.ml.residual import TorchResidualModel
-from twinops.estimation.ekf import EKF
+from twinops.estimation import EKF
 
 # build components
-physics = PumpPhysics()
-residual_model = TorchResidualModel(my_trained_torch_model)
+physics = PumpLike()
+residual_model = TorchResidualModel(my_trained_torch_model, state_dim=2, input_dim=1)
 ekf = EKF(state_dim=2, meas_dim=1)
 
 # create twin
@@ -189,5 +229,45 @@ for u_t, y_t in sensor_stream:
 
     if anomaly_score > threshold:
         print("⚠️ Anomaly detected")
-
 ```
+
+---
+
+## 🧠 Neural dynamics (simulate with neural networks)
+
+You can use **neural networks** as the physics model to simulate complex dynamical systems:
+
+- **NeuralODEModel** (continuous): `dx/dt = net(x, u, t)`, same interface as `ODEModel`, works with integrators and Series/Parallel.
+- **NeuralDynamicsModel** (discrete): `x_{k+1} = net(x_k, u_k, dt)`, usable as physics in `TwinSystem`.
+
+**Example: train and simulate with Neural ODE**
+
+```python
+from twinops.physics import NeuralODEModel, RK4Integrator
+from twinops.ml import prepare_ode_data_from_timeseries, train_neural_ode
+
+# From time series (t, x, u), build (X, y) with y = dx/dt
+X, y = prepare_ode_data_from_timeseries(t, x, u)
+
+model = NeuralODEModel(n_states=2, n_inputs=1, hidden_size=64, integrator=RK4Integrator())
+train_neural_ode(model, X, y, epochs=100)
+
+# Use as physics in the twin (same as any ODEModel)
+twin = TwinSystem(physics=model, estimator=ekf, dt=0.01)
+twin.initialize(x0=[0.0, 0.0])
+```
+
+**Example: discrete-time neural dynamics**
+
+```python
+from twinops.ml import NeuralDynamicsModel, default_dynamics_net, train_dynamics
+
+net = default_dynamics_net(state_dim=2, input_dim=1)
+model = NeuralDynamicsModel(net, state_dim=2, input_dim=1)
+train_dynamics(model, (states, inputs, next_states), dt=0.01, epochs=100)
+
+# Use as physics in the twin
+twin = TwinSystem(physics=model, estimator=ekf, dt=0.01)
+```
+
+See **examples/neural_dynamics/run_neural_dynamics.py** for a full run (harmonic oscillator, train both models, compare trajectories).
