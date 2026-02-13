@@ -4,6 +4,7 @@ Modelli fisici per il digital twin.
 Gerarchia:
   - integrators: integrazione numerica (Euler, Heun, Midpoint, RK4, BackwardEuler)
   - ode: modello base ODE (ODEModel)
+  - symbolic: modello ODE appreso da dati (SymbolicODEModel, richiede gplearn)
   - compose: composizione di modelli (SeriesModel, ParallelModel)
   - library: modelli parametrici pronti (FirstOrderLag, DoubleIntegrator, ...)
 """
@@ -24,6 +25,9 @@ from twinops.physics.integrators import (
 
 # --- Modello base ODE ---
 from twinops.physics.ode import ODEModel
+
+# --- Symbolic (modello fisico da dati) ---
+from twinops.physics.symbolic import SymbolicODEModel
 
 # --- Composizione ---
 from twinops.physics.compose import ParallelModel, SeriesModel
@@ -52,6 +56,8 @@ __all__ = [
     "backward_euler_step",
     # Base
     "ODEModel",
+    # Symbolic
+    "SymbolicODEModel",
     # Composizione
     "SeriesModel",
     "ParallelModel",

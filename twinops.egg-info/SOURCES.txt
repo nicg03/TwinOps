@@ -1,6 +1,7 @@
 README.md
 pyproject.toml
 tests/test_imports.py
+tests/test_physics_symbolic.py
 twinops/__init__.py
 twinops.egg-info/PKG-INFO
 twinops.egg-info/SOURCES.txt
@@ -25,5 +26,9 @@ twinops/ml/__init__.py
 twinops/ml/residual.py
 twinops/ml/training.py
 twinops/physics/__init__.py
+twinops/physics/compose.py
 twinops/physics/fmi.py
+twinops/physics/integrators.py
+twinops/physics/library.py
 twinops/physics/ode.py
+twinops/physics/symbolic.py

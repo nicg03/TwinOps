@@ -24,6 +24,8 @@ Requires-Dist: pytest>=7.0; extra == "dev"
 Requires-Dist: pytest-cov>=4.0; extra == "dev"
 Requires-Dist: black>=23.0; extra == "dev"
 Requires-Dist: ruff>=0.1; extra == "dev"
+Provides-Extra: symbolic
+Requires-Dist: gplearn>=0.4; extra == "symbolic"
 
 # TwinOps
 
@@ -80,7 +82,8 @@ TwinOps/
 │   ├── health/         # indicators, rul
 │   └── io/             # streams, serializers
 ├── examples/
-│   └── pump_predictive_maintenance/
+│   ├── pump_predictive_maintenance/
+│   └── online_degradation/
 └── tests/
 ```
 
@@ -169,11 +172,14 @@ Input/output e integrazione.
 Casi d’uso riproducibili.
 
 - **pump_predictive_maintenance/**  
-  Esempio completo di manutenzione predittiva per una pompa industriale:
-  - generazione dati,
-  - training modello ML,
-  - esecuzione online del digital twin,
-  - anomaly detection e RUL.
+  Esempio minimo: digital twin pompa con fisica ODE + EKF, health e RUL.
+
+- **online_degradation/**  
+  Esempio più complesso con **misure simulate online** e **degradazione**:
+  - generazione step-by-step di (u, y) come da sensori,
+  - guasto simulato (efficienza ridotta) per verificare anomaly, HI e RUL,
+  - AnomalyDetector (EMA/CUSUM) per allarmi adattivi,
+  - export CSV e grafici per analisi.
 
 ---
 

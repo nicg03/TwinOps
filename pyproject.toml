@@ -35,6 +35,9 @@ dev = [
     "black>=23.0",
     "ruff>=0.1",
 ]
+symbolic = [
+    "gplearn>=0.4",
+]
 
 [tool.setuptools.packages.find]
 where = ["."]

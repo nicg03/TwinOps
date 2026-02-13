@@ -17,8 +17,9 @@ def test_import_core() -> None:
 
 
 def test_import_physics() -> None:
-    from twinops.physics import ODEModel, EulerIntegrator, RK4Integrator
+    from twinops.physics import ODEModel, SymbolicODEModel, EulerIntegrator, RK4Integrator
     assert ODEModel is not None
+    assert SymbolicODEModel is not None
     assert EulerIntegrator is not None
     assert RK4Integrator is not None
 
