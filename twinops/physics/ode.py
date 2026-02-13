@@ -96,3 +96,56 @@ class ODEModel(TwinComponent):
 
     def state_dict(self) -> Dict[str, Any]:
         return {"t": self._t}
+
+
+if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+
+    class HarmonicOscillator(ODEModel):
+        def __init__(self, omega = 1.0, **kwargs: Any) -> None:
+            super().__init__(**kwargs)
+            self.omega_sq = omega ** 2
+
+        def rhs(self, x, u, t) -> np.ndarray:
+            x1, x2 = x[0], x[1]
+            return np.array([x2, -self.omega_sq * x1])
+
+    
+    omega = 1.0
+    dt = 0.05
+    t_end = 10.0
+    x0 = np.array([1.0, 0.0])  # posizione 1, velocità 0
+
+    model = HarmonicOscillator(omega=omega)
+    model.initialize()
+
+    # Simulazione
+    t_vals = [0.0]
+    x_vals = [x0.copy()]
+    x = x0
+    t = 0.0
+    while t < t_end:
+        out = model.step(state=x, u=np.array([]), dt=dt)
+        x = out["state"]
+        t += dt
+        t_vals.append(t)
+        x_vals.append(x.copy())
+
+    t_vals = np.array(t_vals)
+    pos = np.array([xv[0] for xv in x_vals])
+    vel = np.array([xv[1] for xv in x_vals])
+
+    # Plot
+    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+    ax1.plot(t_vals, pos, label="posizione x1")
+    ax1.set_ylabel("x1")
+    ax1.legend()
+    ax1.grid(True)
+    ax2.plot(t_vals, vel, label="velocità x2")
+    ax2.set_ylabel("x2")
+    ax2.set_xlabel("t")
+    ax2.legend()
+    ax2.grid(True)
+    plt.suptitle("Oscillatore armonico (ODE)")
+    plt.tight_layout()
+    plt.show()
