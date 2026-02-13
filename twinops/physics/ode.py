@@ -1,53 +1,29 @@
-"""Modello a equazioni differenziali ordinarie e integratori (Euler, RK4)."""
+"""
+Modello base a equazioni differenziali ordinarie: dx/dt = rhs(x, u, t).
 
-from abc import ABC, abstractmethod
+Usa un integratore (da physics.integrators) per avanzare nel tempo.
+Il metodo rhs() va implementato nelle sottoclassi.
+"""
+
 from typing import Any, Callable, Dict, Optional
 
 import numpy as np
 
 from twinops.core.component import TwinComponent
 
-
-def euler_step(f: Callable[[np.ndarray, np.ndarray, float], np.ndarray], x: np.ndarray, u: np.ndarray, t: float, dt: float) -> np.ndarray:
-    """Un passo di Eulero esplicito: x_{n+1} = x_n + dt * f(x_n, u_n, t_n)."""
-    return x + dt * f(x, u, t)
-
-
-def rk4_step(f: Callable[[np.ndarray, np.ndarray, float], np.ndarray], x: np.ndarray, u: np.ndarray, t: float, dt: float) -> np.ndarray:
-    """Un passo di Runge-Kutta 4."""
-    k1 = f(x, u, t)
-    k2 = f(x + 0.5 * dt * k1, u, t + 0.5 * dt)
-    k3 = f(x + 0.5 * dt * k2, u, t + 0.5 * dt)
-    k4 = f(x + dt * k3, u, t + dt)
-    return x + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)
-
-
-class EulerIntegrator:
-    """Integratore Euler esplicito."""
-
-    @staticmethod
-    def step(f: Callable[[np.ndarray, np.ndarray, float], np.ndarray], x: np.ndarray, u: np.ndarray, t: float, dt: float) -> np.ndarray:
-        return euler_step(f, x, u, t, dt)
-
-
-class RK4Integrator:
-    """Integratore Runge-Kutta 4."""
-
-    @staticmethod
-    def step(f: Callable[[np.ndarray, np.ndarray, float], np.ndarray], x: np.ndarray, u: np.ndarray, t: float, dt: float) -> np.ndarray:
-        return rk4_step(f, x, u, t, dt)
+from twinops.physics.integrators import RK4Integrator
 
 
 class ODEModel(TwinComponent):
     """
-    Classe base per modelli descritti da ODE: dx/dt = f(x, u, t).
-    Il metodo rhs() va implementato nelle sottoclassi.
+    Classe base per modelli ODE: dx/dt = rhs(x, u, t).
+    Sottoclassi implementano rhs(); l'integratore è configurabile.
     """
 
     def __init__(self, integrator: Optional[Any] = None) -> None:
         """
         Args:
-            integrator: oggetto con metodo step(f, x, u, t, dt). Default: RK4.
+            integrator: oggetto con metodo step(f, x, u, t, dt). Default: RK4Integrator.
         """
         self.integrator = integrator or RK4Integrator()
         self._t: float = 0.0
@@ -63,7 +39,7 @@ class ODEModel(TwinComponent):
     def output(self, x: np.ndarray, u: np.ndarray) -> np.ndarray:
         """
         Uscita osservabile (misura) in funzione di stato e ingresso.
-        Default: ritorna lo stato; override per output parziale.
+        Default: ritorna lo stato; override o set_output_fn per output parziale.
         """
         if self._output_fn is not None:
             return self._output_fn(x, u)
@@ -102,27 +78,25 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
     class HarmonicOscillator(ODEModel):
-        def __init__(self, omega = 1.0, **kwargs: Any) -> None:
+        def __init__(self, omega: float = 1.0, **kwargs: Any) -> None:
             super().__init__(**kwargs)
             self.omega_sq = omega ** 2
 
-        def rhs(self, x, u, t) -> np.ndarray:
+        def rhs(self, x: np.ndarray, u: np.ndarray, t: float) -> np.ndarray:
             x1, x2 = x[0], x[1]
             return np.array([x2, -self.omega_sq * x1])
 
-    
     omega = 1.0
     dt = 0.05
     t_end = 10.0
-    x0 = np.array([1.0, 0.0])  # posizione 1, velocità 0
+    x0 = np.array([1.0, 0.0])
 
     model = HarmonicOscillator(omega=omega)
     model.initialize()
 
-    # Simulazione
     t_vals = [0.0]
     x_vals = [x0.copy()]
-    x = x0
+    x = x0.copy()
     t = 0.0
     while t < t_end:
         out = model.step(state=x, u=np.array([]), dt=dt)
@@ -135,7 +109,6 @@ if __name__ == "__main__":
     pos = np.array([xv[0] for xv in x_vals])
     vel = np.array([xv[1] for xv in x_vals])
 
-    # Plot
     fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
     ax1.plot(t_vals, pos, label="posizione x1")
     ax1.set_ylabel("x1")
