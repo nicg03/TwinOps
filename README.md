@@ -44,6 +44,8 @@ TwinOps/
 ├── pyproject.toml
 ├── requirements.txt
 ├── README.md
+├── data/               # dataset (C-MAPSS, ecc.); vedi data/README.md
+│   └── turbofan_engine_degradation/
 ├── twinops/
 │   ├── __init__.py
 │   ├── core/           # system, component, signals, history
@@ -192,6 +194,12 @@ Reproducible use cases.
   Run `python examples/neural_dynamics/run_neural_dynamics.py` to train both
   on a harmonic oscillator and compare trajectories (true vs Neural ODE vs Neural Dynamics).
 
+- **turbofan_engine_degradation/**
+  Full pipeline for **NASA C-MAPSS** (turbofan degradation): load train/test, train
+  NeuralDynamicsModel on sensor + settings data, run TwinSystem (physics + EKF + health + RUL)
+  on test units, and evaluate RUL predictions vs ground truth.
+  Run `python examples/turbofan_engine_degradation/run_turbofan_twinops.py --fd FD001 [--plot]`.
+
 ---
 
 ## 🚀 Minimal usage example
@@ -271,3 +279,22 @@ twin = TwinSystem(physics=model, estimator=ekf, dt=0.01)
 ```
 
 See **examples/neural_dynamics/run_neural_dynamics.py** for a full run (harmonic oscillator, train both models, compare trajectories).
+
+---
+
+## 📊 Datasets
+
+TwinOps can be used with real-world prognostic datasets. Below are the datasets currently supported or recommended for examples and benchmarks.
+
+### Turbofan Engine Degradation Simulation (NASA C-MAPSS)
+
+The **Turbofan Engine Degradation Simulation** dataset (NASA C-MAPSS — *Commercial Modular Aero-Propulsion System Simulation*) is a widely used benchmark for **prognostic and health management (PHM)** and **Remaining Useful Life (RUL)** estimation of turbofan engines.
+
+- **Content**: time series of sensor readings (temperature, pressure, RPM, etc.) on simulated engines degrading until failure. Each unit (engine) has a full life cycle; RUL is known at each time step.
+- **Variants**: FD001–FD004 with different operating conditions and number of fault modes.
+- **Use with TwinOps**: suitable for digital twin examples with state/parameter estimation, anomaly detection, health indicators, and RUL models (physics-based or ML).
+- **Download**: [NASA Prognostics Data Repository](https://ti.arc.nasa.gov/tech/dash/groups/pcoe/prognostic-data-repository/) (C-MAPSS).
+
+- **Dove mettere i file**: nella repository, i dataset vanno in **`data/`** alla root. Per C-MAPSS: `data/turbofan_engine_degradation/` (vedi `data/README.md` per istruzioni di download e struttura).
+
+To integrate C-MAPSS in a TwinOps example, load the CSVs from `data/turbofan_engine_degradation/`, define signals and history, and feed the stream into `TwinSystem` (physics + estimator + health/RUL).
