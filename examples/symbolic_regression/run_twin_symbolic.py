@@ -207,7 +207,8 @@ def main() -> None:
     try:
         _plot_results(history, out_dir)
     except ImportError:
-        print("   (matplotlib non disponibile, grafici saltati)")
+        print("   Grafici saltati: matplotlib non disponibile.")
+        print("   Per abilitarli: pip install matplotlib (usa lo stesso Python con cui lanci lo script)")
 
     print("Fatto.")
 
