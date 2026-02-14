@@ -44,7 +44,7 @@ TwinOps/
 ├── pyproject.toml
 ├── requirements.txt
 ├── README.md
-├── data/               # dataset (C-MAPSS, ecc.); vedi data/README.md
+├── data/               # datasets (e.g. C-MAPSS); see data/README.md
 │   └── turbofan_engine_degradation/
 ├── twinops/
 │   ├── __init__.py
@@ -129,24 +129,24 @@ Physics models.
 ---
 
 ### `ml/`
-Apprendimento della dinamica del sistema (modello surrogato).
+Learning system dynamics (surrogate model).
 
 - **surrogate.py**
-  Struttura logica: interfaccia/concetto di “dinamica surrogata” (modello ottenuto da dati, utilizzabile come fisica nel twin).
+  Logical structure: interface/concept of “surrogate dynamics” (model learned from data, usable as physics in the twin).
 
 - **dynamics.py**
-  `NeuralDynamicsModel`: dinamica discreta `x_{k+1} = net(x_k, u_k, dt)`.
-  Utilizzabile come **physics** in `TwinSystem` o in Series/Parallel.
-  Addestramento tramite `learn()` o `train_dynamics()`.
+  `NeuralDynamicsModel`: discrete dynamics `x_{k+1} = net(x_k, u_k, dt)`.
+  Usable as **physics** in `TwinSystem` or in Series/Parallel.
+  Training via `Learner.learn()` or `train_dynamics()`.
 
 - **training.py**
-  Funzioni di training per il surrogato:
-  - **train_dynamics**: modello discreto (state, u, dt) → state_next.
-  - **train_neural_ode**: rhs Neural ODE da (X, y) con X = [x, u, t], y = dx/dt.
-  - **prepare_ode_data_from_timeseries**, **compute_dx_dt_central**: preparazione dati da serie temporali.
+  Training utilities for the surrogate:
+  - **train_dynamics**: discrete model (state, u, dt) → state_next.
+  - **train_neural_ode**: Neural ODE rhs from (X, y) with X = [x, u, t], y = dx/dt.
+  - **prepare_ode_data_from_timeseries**, **compute_dx_dt_central**: prepare data from time series.
 
-- **learn()**
-  Entry-point: dati (serie temporali o (x, u, dt)) → modello surrogato (TwinComponent) pronto per creare/importare il twin e simulare la dinamica.
+- **Learner** (in **learner.py**)
+  Class with `learn(dynamics=...)` or `learn(data=...)`: builds a surrogate (TwinComponent) from a TwinComponent or raw data, for use as physics in the twin.
 
 ---
 
@@ -307,6 +307,6 @@ The **Turbofan Engine Degradation Simulation** dataset (NASA C-MAPSS — *Commer
 - **Use with TwinOps**: suitable for digital twin examples with state/parameter estimation, anomaly detection, and health indicators.
 - **Download**: [NASA Prognostics Data Repository](https://ti.arc.nasa.gov/tech/dash/groups/pcoe/prognostic-data-repository/) (C-MAPSS).
 
-- **Dove mettere i file**: nella repository, i dataset vanno in **`data/`** alla root. Per C-MAPSS: `data/turbofan_engine_degradation/` (vedi `data/README.md` per istruzioni di download e struttura).
+- **Where to put files**: place datasets in **`data/`** at the repository root. For C-MAPSS: `data/turbofan_engine_degradation/` (see `data/README.md` for download and layout instructions).
 
 To integrate C-MAPSS in a TwinOps example, load the CSVs from `data/turbofan_engine_degradation/`, define signals and history, and feed the stream into `TwinSystem` (physics + estimator + health).
