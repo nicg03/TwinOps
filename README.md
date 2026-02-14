@@ -53,7 +53,8 @@ TwinOps/
 │   ├── ml/             # residual, dynamics, training
 │   ├── estimation/     # ekf, residuals
 │   ├── health/         # health indicators
-│   └── io/             # streams, serializers
+│   ├── io/             # streams, serializers
+│   └── simulations/   # domain-specific complex dynamical systems
 ├── examples/
 │   ├── pump_predictive_maintenance/
 │   ├── online_degradation/
@@ -179,6 +180,25 @@ Input/output and integration.
 
 - **serializers.py**
   Save/load configurations and twin snapshots.
+
+---
+
+### `simulations/`
+Domain-specific **complex dynamical systems** for full modeling and simulation.
+
+Each file models a class of systems (as `ODEModel` / `TwinComponent`), usable as physics in `TwinSystem` or with `Learner.learn(dynamics=...)`. Visualization helpers live in `_utils.py` (phase portrait, state vs time, animations).
+
+- **_oscillators.py**
+  Coupled harmonic oscillators (e.g. chains with nearest-neighbor coupling). State: positions and velocities; suitable for phase portraits and time-series plots.
+
+- **_thermal.py**
+  Lumped thermal systems (temperatures, heat transfer). State: node temperatures; R/C network models.
+
+- **_(future)**  
+  Planned: **_multibody.py** (rigid bodies, pendulums, robot arms), **_electrical_networks.py** (RLC circuits), **_pendulums.py**, **_vehicles.py**, etc.
+
+- **_utils.py**
+  Visualization: `plot_phase_portrait()`, `plot_state_vs_time()` from `TwinHistory` or raw (time, state) arrays. Optional matplotlib.
 
 ---
 
