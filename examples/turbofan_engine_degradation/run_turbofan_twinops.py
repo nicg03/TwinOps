@@ -2,15 +2,14 @@
 Full TwinOps pipeline for the NASA C-MAPSS turbofan engine degradation dataset.
 
 Flow:
-  1. Load train/test and RUL data from data/turbofan_engine_degradation/.
+  1. Load train/test from data/turbofan_engine_degradation/.
   2. State reduction: subset of sensors as state, 3 operational settings as input.
   3. Train NeuralDynamicsModel on (x_k, u_k, x_{k+1}) from training data.
-  4. Build TwinSystem: physics (trained model) + EKF + Health + SimpleRUL.
-  5. For each test unit: stream (u, y) → twin.step → RUL at last cycle.
-  6. Compare predicted vs true RUL (RMSE, MAE) and optional plot.
+  4. Build TwinSystem: physics (trained model) + EKF + Health.
+  5. For each test unit: stream (u, y) → twin.step → history (anomaly, HI).
 
 Usage:
-  python examples/turbofan_engine_degradation/run_turbofan_twinops.py [--fd FD001] [--plot]
+  python examples/turbofan_engine_degradation/run_turbofan_twinops.py [--fd FD001]
 """
 
 import argparse
@@ -30,7 +29,7 @@ except ImportError:
 
 from twinops.core import TwinSystem
 from twinops.estimation import EKF
-from twinops.health import HealthIndicator, SimpleRUL
+from twinops.health import HealthIndicator
 from twinops.io.streams import BatchStream
 from twinops.ml import NeuralDynamicsModel, default_dynamics_net, train_dynamics
 
@@ -109,12 +108,6 @@ def prepare_dynamics_data(units_dict: dict, sensor_indices: list):
     )
 
 
-def load_rul_true(path: Path) -> np.ndarray:
-    """Load true RUL (one row per test unit, same order as in test file)."""
-    with open(path) as f:
-        return np.array([float(line.strip()) for line in f if line.strip()])
-
-
 # ---------------------------------------------------------------------------
 # 2) NeuralDynamicsModel training
 # ---------------------------------------------------------------------------
@@ -146,7 +139,7 @@ def train_physics(
 
 
 # ---------------------------------------------------------------------------
-# 3) Twin and RUL evaluation
+# 3) Twin and evaluation on test units
 # ---------------------------------------------------------------------------
 
 
@@ -158,31 +151,27 @@ def run_twin_on_unit(
 ) -> tuple:
     """
     Run the twin on a single unit (stream u, y).
-    Returns (RUL at last step, list of anomalies, list of HIs).
+    Returns (list of anomalies, list of HIs).
     """
     twin.initialize(x0=x0)
     stream = BatchStream(inputs, measurements)
-    rul_last = None
     anomalies, his = [], []
     for u_t, y_t in stream:
         res = twin.step(u=u_t, measurement=y_t)
-        rul_last = res.rul
         anomalies.append(res.anomaly)
         his.append(res.health_indicator if res.health_indicator is not None else np.nan)
-    return rul_last, anomalies, his
+    return anomalies, his
 
 
 def main():
     parser = argparse.ArgumentParser(description="TwinOps pipeline C-MAPSS")
     parser.add_argument("--fd", default="FD001", choices=["FD001", "FD002", "FD003", "FD004"])
     parser.add_argument("--epochs", type=int, default=80)
-    parser.add_argument("--plot", action="store_true", help="Save plot of true vs predicted RUL")
     args = parser.parse_args()
 
     fd = args.fd
     train_path = DATA_DIR / f"train_{fd}.txt"
     test_path = DATA_DIR / f"test_{fd}.txt"
-    rul_path = DATA_DIR / f"RUL_{fd}.txt"
 
     if not train_path.exists() or not test_path.exists():
         print(f"Data files not found in {DATA_DIR}. Ensure train_{fd}.txt and test_{fd}.txt exist.")
@@ -193,7 +182,6 @@ def main():
     test_raw = load_cmapss_file(test_path)
     train_units = split_by_unit(train_raw)
     test_units = split_by_unit(test_raw)
-    rul_true = load_rul_true(rul_path) if rul_path.exists() else None
 
     state_dim = len(SENSOR_INDICES)
     input_dim = N_SETTINGS
@@ -217,29 +205,21 @@ def main():
         return out["state"]
 
     ekf = EKF(state_dim=state_dim, meas_dim=meas_dim, f=f_pred)
-    # HI from anomaly: degradation → EKF innovation grows → HI drops
     health = HealthIndicator(fn=lambda state, anomaly: float(np.clip(1.0 / (1.0 + 0.1 * anomaly), 0.0, 1.0)))
-    rul_estimator = SimpleRUL(hi_fail=0.3, min_rul=0.0, max_rul=500.0)
 
     twin = TwinSystem(
         physics=physics,
         estimator=ekf,
         health=health,
-        rul=rul_estimator,
         dt=1.0,
         state_dim=state_dim,
         input_dim=input_dim,
         meas_dim=meas_dim,
     )
 
-    # Test unit order: same as in file (1, 2, ...)
     unit_ids = sorted(test_units.keys())
-    if rul_true is not None and len(rul_true) != len(unit_ids):
-        print(f"Warning: true RUL has {len(rul_true)} rows, test units {len(unit_ids)}")
-
     print("Running twin on test units...")
-    rul_predictions = []
-    for i, uid in enumerate(unit_ids):
+    for uid in unit_ids:
         data = test_units[uid]
         settings = np.asarray(data["settings"], dtype=np.float32)
         sensors_sub = extract_state_sensors(
@@ -247,44 +227,9 @@ def main():
             SENSOR_INDICES,
         )
         x0 = sensors_sub[0]
-        rul_last, _, _ = run_twin_on_unit(twin, settings, sensors_sub, x0)
-        rul_predictions.append(rul_last if rul_last is not None else np.nan)
-
-    rul_predictions = np.array(rul_predictions, dtype=float)
-
-    # Metrics
-    print("\n--- RUL results ---")
-    if rul_true is not None and len(rul_true) == len(rul_predictions):
-        valid = np.isfinite(rul_predictions)
-        if np.any(valid):
-            rmse = np.sqrt(np.nanmean((rul_predictions - rul_true) ** 2))
-            mae = np.nanmean(np.abs(rul_predictions - rul_true))
-            print(f"  RMSE RUL: {rmse:.2f}")
-            print(f"  MAE  RUL: {mae:.2f}")
-        else:
-            print("  No valid RUL predictions (SimpleRUL requires HI trend).")
-        if args.plot:
-            try:
-                import matplotlib
-                matplotlib.use("Agg")
-                import matplotlib.pyplot as plt
-                plt.figure(figsize=(6, 5))
-                plt.scatter(rul_true, rul_predictions, alpha=0.7, label="Units")
-                mn = min(rul_true.min(), np.nanmin(rul_predictions))
-                mx = max(rul_true.max(), np.nanmax(rul_predictions))
-                plt.plot([mn, mx], [mn, mx], "k--", label="y=x")
-                plt.xlabel("True RUL (cycles)")
-                plt.ylabel("Predicted RUL (cycles)")
-                plt.title(f"C-MAPSS {fd}: True vs predicted RUL (TwinOps)")
-                plt.legend()
-                out_path = ROOT / "examples" / "turbofan_engine_degradation" / f"rul_{fd}.png"
-                plt.savefig(out_path, dpi=120)
-                plt.close()
-                print(f"  Plot saved: {out_path}")
-            except Exception as e:
-                print(f"  Plot not saved: {e}")
-    else:
-        print("  True RUL not available or length mismatch.")
+        anomalies, his = run_twin_on_unit(twin, settings, sensors_sub, x0)
+        hi_final = his[-1] if his else None
+        print(f"  Unit {uid}: {len(anomalies)} steps, final HI={hi_final:.3f}" if hi_final is not None else f"  Unit {uid}: {len(anomalies)} steps")
 
     print("Done.")
 

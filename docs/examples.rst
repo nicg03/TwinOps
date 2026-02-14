@@ -8,7 +8,7 @@ TwinOps includes several reproducible examples in the ``examples/`` folder.
 Pump predictive maintenance
 ---------------------------
 Minimal example: digital twin of a pump with ODE model (``PumpLike``), EKF,
-health, and RUL.
+and health.
 
 **Path:** ``examples/pump_predictive_maintenance/run_pump_twin.py``
 
@@ -44,8 +44,7 @@ Simulation with neural networks: NeuralODEModel (continuous) and NeuralDynamicsM
 Turbofan engine degradation (C-MAPSS)
 --------------------------------------
 Full pipeline on the NASA C-MAPSS dataset: load train/test, train
-NeuralDynamicsModel, TwinSystem with EKF + Health + SimpleRUL on test units,
-evaluate RMSE/MAE RUL.
+NeuralDynamicsModel, TwinSystem with EKF + Health on test units.
 
 **Path:** ``examples/turbofan_engine_degradation/run_turbofan_twinops.py``
 

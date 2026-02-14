@@ -1,6 +1,5 @@
 """
-Esempio minimo: digital twin pompa con fisica ODE + EKF.
-Senza ML residual; con health indicator e RUL semplice.
+Esempio minimo: digital twin pompa con fisica ODE + EKF e health indicator.
 """
 
 import sys
@@ -15,7 +14,7 @@ sys.path.insert(0, str(ROOT))
 from twinops.core import TwinSystem, TwinHistory
 from twinops.physics import ODEModel, RK4Integrator
 from twinops.estimation import EKF
-from twinops.health import HealthIndicator, SimpleRUL
+from twinops.health import HealthIndicator
 from twinops.io import BatchStream
 
 
@@ -45,14 +44,12 @@ def main() -> None:
 
     ekf = EKF(state_dim=state_dim, meas_dim=meas_dim, f=f_pred)
     health = HealthIndicator()
-    rul = SimpleRUL(hi_fail=0.3)
 
     twin = TwinSystem(
         physics=physics,
         estimator=ekf,
         residual=None,
         health=health,
-        rul=rul,
         dt=dt,
     )
 
@@ -79,7 +76,6 @@ def main() -> None:
         history.append(
             state=result.state,
             anomaly=result.anomaly,
-            rul=result.rul,
             health_indicator=result.health_indicator,
         )
         if result.anomaly > 0.5:

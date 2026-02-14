@@ -4,7 +4,7 @@ Complex example: online pipeline with simulated measurements and degradation.
 Verifies TwinOps with:
 - "Online" simulation: measurements generated step-by-step as from real sensors.
 - Process with degradation: after N steps a fault reduces efficiency,
-  measurements diverge from the model → anomaly rises, HI drops, RUL updates.
+  measurements diverge from the model → anomaly rises, HI drops.
 - AnomalyDetector (EMA/CUSUM) for adaptive alarms on anomaly score.
 - CSV and plot export for analysis.
 """
@@ -20,7 +20,7 @@ sys.path.insert(0, str(ROOT))
 from twinops.core import TwinSystem, TwinHistory
 from twinops.physics import ODEModel, RK4Integrator
 from twinops.estimation import EKF, AnomalyDetector
-from twinops.health import HealthIndicator, SimpleRUL
+from twinops.health import HealthIndicator
 
 
 # ---------------------------------------------------------------------------
@@ -84,7 +84,7 @@ def main() -> None:
     fault_start = 400
     efficiency_fault = 0.72
 
-    # Twin: physics + EKF + health + RUL
+    # Twin: physics + EKF + health
     physics = PumpPhysics(integrator=RK4Integrator())
     physics.set_output_fn(lambda x, u: np.array([x[0]]))
 
@@ -93,14 +93,12 @@ def main() -> None:
 
     ekf = EKF(state_dim=state_dim, meas_dim=meas_dim, f=f_pred)
     health = HealthIndicator()
-    rul = SimpleRUL(hi_fail=0.3, min_rul=0.0, max_rul=100.0)
 
     twin = TwinSystem(
         physics=physics,
         estimator=ekf,
         residual=None,
         health=health,
-        rul=rul,
         dt=dt,
     )
 
@@ -148,7 +146,6 @@ def main() -> None:
             state_1=float(result.state[1]),
             anomaly=result.anomaly,
             health_indicator=result.health_indicator if result.health_indicator is not None else np.nan,
-            rul=result.rul if result.rul is not None else np.nan,
             ema=ema,
             cusum_pos=cusum_p,
             cusum_neg=cusum_n,
@@ -157,13 +154,10 @@ def main() -> None:
         # CUSUM alarm
         if cusum_p >= anomaly_detector.cusum_threshold or cusum_n >= anomaly_detector.cusum_threshold:
             print(f"  [step {step}] ALERT CUSUM: anomaly={result.anomaly:.4f} ema={ema:.4f} "
-                  f"cusum_pos={cusum_p:.3f} cusum_neg={cusum_n:.3f} HI={result.health_indicator:.3f} RUL={result.rul}")
+                  f"cusum_pos={cusum_p:.3f} cusum_neg={cusum_n:.3f} HI={result.health_indicator:.3f}")
 
-        # Log expected degradation
         if step == fault_start:
             print(f"  [step {step}] Simulated fault applied (efficiency -> {efficiency_fault})")
-        if step == fault_start + 50 and result.rul is not None:
-            print(f"  [step {step}] Estimated RUL: {result.rul:.2f} s")
 
     print(f"Steps: {len(history)}, final state: {twin.state}")
     print("Exporting CSV and plots...")
@@ -213,13 +207,12 @@ def _plot_results(history: TwinHistory, fault_start: int, out_dir: Path) -> None
     ax.legend(loc="upper right", fontsize=8)
     ax.grid(True, alpha=0.3)
 
-    # Health indicator + RUL
+    # Health indicator
     ax = axes[2]
     ax.plot(steps, data["health_indicator"], label="Health Indicator")
-    ax.plot(steps, data["rul"], alpha=0.9, label="RUL (s)")
     ax.axvline(fault_start, color="gray", linestyle="--", alpha=0.7)
     ax.axhline(0.3, color="red", linestyle=":", alpha=0.5, label="HI fail")
-    ax.set_ylabel("HI / RUL")
+    ax.set_ylabel("HI")
     ax.legend(loc="upper right", fontsize=8)
     ax.grid(True, alpha=0.3)
 

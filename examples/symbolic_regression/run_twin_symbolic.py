@@ -4,7 +4,7 @@ Full example: digital twin with physics learned from data (symbolic regression).
 Flow:
   1. Generate data (t, x, u) from a "true" model (PumpLike) — in practice from CSV.
   2. Learn the physics model with SymbolicODEModel (fit_from_timeseries).
-  3. Build the twin: physics=SymbolicODEModel, EKF, HealthIndicator, SimpleRUL.
+  3. Build the twin: physics=SymbolicODEModel, EKF, HealthIndicator.
   4. Run the twin loop with stream (u, y) and collect history.
   5. Print summary and export CSV/plots.
 
@@ -30,7 +30,7 @@ except ImportError:
 from twinops.core import TwinSystem, TwinHistory
 from twinops.physics import SymbolicODEModel, PumpLike, RK4Integrator
 from twinops.estimation import EKF
-from twinops.health import HealthIndicator, SimpleRUL
+from twinops.health import HealthIndicator
 from twinops.io import BatchStream
 
 
@@ -91,11 +91,11 @@ def fit_physics_symbolic(
 
 
 # ---------------------------------------------------------------------------
-# 3) Twin: symbolic physics + EKF + health + RUL
+# 3) Twin: symbolic physics + EKF + health
 # ---------------------------------------------------------------------------
 
 def build_twin(physics: SymbolicODEModel, dt: float) -> TwinSystem:
-    """Build TwinSystem with physics (SymbolicODEModel), EKF, health, RUL."""
+    """Build TwinSystem with physics (SymbolicODEModel), EKF, health."""
     state_dim = physics.n_states
     meas_dim = 1  # we only measure x[0] (flow rate)
     physics.set_output_fn(lambda x, u: np.array([x[0]]))
@@ -105,14 +105,12 @@ def build_twin(physics: SymbolicODEModel, dt: float) -> TwinSystem:
 
     ekf = EKF(state_dim=state_dim, meas_dim=meas_dim, f=f_pred)
     health = HealthIndicator()
-    rul = SimpleRUL(hi_fail=0.3)
 
     return TwinSystem(
         physics=physics,
         estimator=ekf,
         residual=None,
         health=health,
-        rul=rul,
         dt=dt,
     )
 
@@ -168,7 +166,7 @@ def main() -> None:
         print(f"     dx{i}/dt = {expr}")
 
     # ---- 3) Build twin ----
-    print("3) Building twin (physics=SymbolicODEModel, EKF, Health, RUL)...")
+    print("3) Building twin (physics=SymbolicODEModel, EKF, Health)...")
     twin = build_twin(physics, dt=dt)
     twin.initialize(x0=x0)
 
@@ -186,7 +184,6 @@ def main() -> None:
         history.append(
             state=result.state,
             anomaly=result.anomaly,
-            rul=result.rul if result.rul is not None else np.nan,
             health_indicator=result.health_indicator if result.health_indicator is not None else np.nan,
         )
         if result.anomaly > 0.5:
@@ -241,8 +238,7 @@ def _plot_results(history: TwinHistory, out_dir: Path) -> None:
 
     ax = axes[2]
     ax.plot(steps, data["health_indicator"], label="Health Indicator")
-    ax.plot(steps, data["rul"], alpha=0.9, label="RUL")
-    ax.set_ylabel("HI / RUL")
+    ax.set_ylabel("HI")
     ax.set_xlabel("Step")
     ax.legend(loc="upper right", fontsize=8)
     ax.grid(True, alpha=0.3)

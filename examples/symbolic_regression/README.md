@@ -8,7 +8,7 @@ Example using **SymbolicODEModel**: an ODE model whose right-hand side `rhs(x, u
 ## Scripts
 
 - **run_symbolic_ode.py** — Fit from (t, x, u) and step-by-step simulation (physics only).
-- **run_twin_symbolic.py** — Full twin example: fit symbolic physics → TwinSystem (physics + EKF + Health + RUL) → loop with stream (u, y) → history → CSV export and plots.
+- **run_twin_symbolic.py** — Full twin example: fit symbolic physics → TwinSystem (physics + EKF + Health) → loop with stream (u, y) → history → CSV export and plots.
 
 ## Running
 

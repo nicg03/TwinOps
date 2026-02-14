@@ -4,7 +4,7 @@ Example: gradual degradation (efficiency decreasing over time).
 Difference from run_online_degradation.py:
 - Step fault: efficiency jumps from 1 to 0.72 at step 400.
 - This example: efficiency decreases linearly from 1.0 to 0.70 between steps 200 and 600,
-  then stays 0.70. Verifies that anomaly, HI and RUL respond to a slow trend.
+  then stays 0.70. Verifies that anomaly and HI respond to a slow trend.
 """
 
 import sys
@@ -18,7 +18,7 @@ sys.path.insert(0, str(ROOT))
 from twinops.core import TwinSystem, TwinHistory
 from twinops.physics import ODEModel, RK4Integrator
 from twinops.estimation import EKF, AnomalyDetector
-from twinops.health import HealthIndicator, SimpleRUL
+from twinops.health import HealthIndicator
 
 
 # ---------------------------------------------------------------------------
@@ -95,14 +95,12 @@ def main() -> None:
 
     ekf = EKF(state_dim=state_dim, meas_dim=meas_dim, f=f_pred)
     health = HealthIndicator()
-    rul = SimpleRUL(hi_fail=0.3, min_rul=0.0, max_rul=100.0)
 
     twin = TwinSystem(
         physics=physics,
         estimator=ekf,
         residual=None,
         health=health,
-        rul=rul,
         dt=dt,
     )
 
@@ -147,19 +145,18 @@ def main() -> None:
             state_1=float(result.state[1]),
             anomaly=result.anomaly,
             health_indicator=result.health_indicator if result.health_indicator is not None else np.nan,
-            rul=result.rul if result.rul is not None else np.nan,
             ema=ema,
             cusum_pos=cusum_p,
             cusum_neg=cusum_n,
         )
 
         if cusum_p >= anomaly_detector.cusum_threshold or cusum_n >= anomaly_detector.cusum_threshold:
-            print(f"  [step {step}] ALERT CUSUM: anomaly={result.anomaly:.4f} HI={result.health_indicator:.3f} RUL={result.rul}")
+            print(f"  [step {step}] ALERT CUSUM: anomaly={result.anomaly:.4f} HI={result.health_indicator:.3f}")
 
         if step == decay_start:
             print(f"  [step {step}] Gradual degradation start")
-        if step == decay_end and result.rul is not None:
-            print(f"  [step {step}] Ramp end; estimated RUL: {result.rul:.2f} s")
+        if step == decay_end:
+            print(f"  [step {step}] Ramp end (gradual degradation complete).")
 
     print(f"Steps: {len(history)}, final state: {twin.state}")
     print("Exporting CSV and plots...")
@@ -204,10 +201,9 @@ def _plot_results(history: TwinHistory, decay_start: int, decay_end: int, out_di
 
     ax = axes[2]
     ax.plot(steps, data["health_indicator"], label="Health Indicator")
-    ax.plot(steps, data["rul"], alpha=0.9, label="RUL (s)")
     ax.axvspan(decay_start, decay_end, color="gray", alpha=0.2)
     ax.axhline(0.3, color="red", linestyle=":", alpha=0.5, label="HI fail")
-    ax.set_ylabel("HI / RUL")
+    ax.set_ylabel("HI")
     ax.legend(loc="upper right", fontsize=8)
     ax.grid(True, alpha=0.3)
 

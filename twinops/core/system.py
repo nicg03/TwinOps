@@ -11,12 +11,11 @@ from twinops.core.history import TwinHistory
 
 @dataclass
 class StepResult:
-    """Result of one twin step: estimated state, anomaly, RUL, etc."""
+    """Result of one twin step: estimated state, anomaly, health indicator, etc."""
 
     state: np.ndarray
     covariance: Optional[np.ndarray] = None
     anomaly: float = 0.0
-    rul: Optional[float] = None
     health_indicator: Optional[float] = None
     extra: Optional[Dict[str, Any]] = None
 
@@ -24,7 +23,7 @@ class StepResult:
 class TwinSystem:
     """
     Digital twin orchestrator.
-    Handles the time loop: physics -> ML residual -> estimator -> health/RUL.
+    Handles the time loop: physics -> ML residual -> estimator -> health.
     """
 
     def __init__(
@@ -33,7 +32,6 @@ class TwinSystem:
         estimator: TwinComponent,
         residual: Optional[TwinComponent] = None,
         health: Optional[TwinComponent] = None,
-        rul: Optional[TwinComponent] = None,
         dt: float = 0.01,
         state_dim: Optional[int] = None,
         input_dim: Optional[int] = None,
@@ -45,7 +43,6 @@ class TwinSystem:
             estimator: filter for state/parameter estimation (e.g. EKF)
             residual: ML corrector (optional)
             health: health indicator computation (optional)
-            rul: RUL estimation (optional)
             dt: time step
             state_dim: state dimension (default from physics)
             input_dim: input dimension
@@ -55,7 +52,6 @@ class TwinSystem:
         self.estimator = estimator
         self.residual = residual
         self.health = health
-        self.rul = rul
         self.dt = dt
         self._state_dim = state_dim
         self._input_dim = input_dim
@@ -78,8 +74,6 @@ class TwinSystem:
             self.residual.initialize(**kwargs)
         if self.health is not None:
             self.health.initialize(**kwargs)
-        if self.rul is not None:
-            self.rul.initialize(**kwargs)
         self._initialized = True
 
     def step(
@@ -89,7 +83,7 @@ class TwinSystem:
         **kwargs: Any,
     ) -> StepResult:
         """
-        Execute one step: physics prediction (+ residual), update with measurement, anomaly/RUL.
+        Execute one step: physics prediction (+ residual), update with measurement, anomaly/health.
 
         Args:
             u: control input
@@ -97,7 +91,7 @@ class TwinSystem:
             **kwargs: additional arguments for components
 
         Returns:
-            StepResult with estimated state, anomaly score, RUL, etc.
+            StepResult with estimated state, anomaly score, health indicator, etc.
         """
         if not self._initialized or self._x is None:
             raise RuntimeError("Twin not initialized: call initialize(x0) before step().")
@@ -141,24 +135,11 @@ class TwinSystem:
             )
             hi = health_out.get("health_indicator")
 
-        # 5) RUL
-        rul_val = None
-        if self.rul is not None:
-            rul_out = self.rul.step(
-                state=self._x,
-                u=u_arr,
-                dt=self.dt,
-                health_indicator=hi,
-                **kwargs,
-            )
-            rul_val = rul_out.get("rul")
-
         self._time += self.dt
         return StepResult(
             state=self._x.copy(),
             covariance=covariance,
             anomaly=anomaly,
-            rul=rul_val,
             health_indicator=hi,
             extra={"physics_output": y_physics, "estimator_out": est_out},
         )
@@ -182,5 +163,4 @@ class TwinSystem:
             "estimator": self.estimator.state_dict(),
             "residual": self.residual.state_dict() if self.residual else {},
             "health": self.health.state_dict() if self.health else {},
-            "rul": self.rul.state_dict() if self.rul else {},
         }

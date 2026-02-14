@@ -20,7 +20,7 @@ TwinOps enables engineers and data scientists to:
 - build a **hybrid digital twin** (physics + ML),
 - continuously synchronize it with real sensor data,
 - estimate **internal state** and **degrading parameters**,
-- detect **anomalies** and estimate **Remaining Useful Life (RUL)**,
+- detect **anomalies** and monitor **health**,
 - do all of this **in Python**, without rewriting simulators or using monolithic tools.
 
 TwinOps is the **computational engine** of the digital twin.
@@ -32,7 +32,7 @@ TwinOps is the **computational engine** of the digital twin.
 - **Physics-first**: physics always comes first when available.
 - **ML as correction**: machine learning corrects what physics does not capture.
 - **Online & stateful**: the twin evolves over time and is always synchronized.
-- **Modular**: every block is replaceable (physics, ML, filter, RUL).
+- **Modular**: every block is replaceable (physics, ML, filter, health).
 - **Industrial-ready**: architecture designed for FMI/FMU and future integration.
 
 ---
@@ -52,7 +52,7 @@ TwinOps/
 │   ├── physics/        # ode, symbolic, neural_ode, compose, library
 │   ├── ml/             # residual, dynamics, training
 │   ├── estimation/     # ekf, residuals
-│   ├── health/         # indicators, rul
+│   ├── health/         # health indicators
 │   └── io/             # streams, serializers
 ├── examples/
 │   ├── pump_predictive_maintenance/
@@ -129,25 +129,24 @@ Physics models.
 ---
 
 ### `ml/`
-Machine learning.
+Apprendimento della dinamica del sistema (modello surrogato).
 
-- **residual.py**
-  Wrapper for PyTorch models used as **correctors** of the physics model
-  (residual learning). Output is a correction added to the predicted state.
+- **surrogate.py**
+  Struttura logica: interfaccia/concetto di “dinamica surrogata” (modello ottenuto da dati, utilizzabile come fisica nel twin).
 
 - **dynamics.py**
-  `NeuralDynamicsModel`: discrete-time dynamics `x_{k+1} = net(x_k, u_k, dt)`.
-  Usable as **physics** in `TwinSystem` or in Series/Parallel.
-  Train with `twinops.ml.training.train_dynamics()`.
-  `default_dynamics_net()` builds a simple MLP for state transition.
+  `NeuralDynamicsModel`: dinamica discreta `x_{k+1} = net(x_k, u_k, dt)`.
+  Utilizzabile come **physics** in `TwinSystem` o in Series/Parallel.
+  Addestramento tramite `learn()` o `train_dynamics()`.
 
 - **training.py**
-  Utilities for training:
-  - **train_residual**: residual corrector (state, u) → correction.
-  - **train_neural_ode**: Neural ODE rhs from (X, y) with X = [x, u, t], y = dx/dt.
-    Use `prepare_ode_data_from_timeseries(t, x, u)` to build (X, y) from time series.
-  - **train_dynamics**: discrete-time model (state, u, dt) → state_next.
-  - **compute_dx_dt_central**: time derivatives from trajectories (for ODE data).
+  Funzioni di training per il surrogato:
+  - **train_dynamics**: modello discreto (state, u, dt) → state_next.
+  - **train_neural_ode**: rhs Neural ODE da (X, y) con X = [x, u, t], y = dx/dt.
+  - **prepare_ode_data_from_timeseries**, **compute_dx_dt_central**: preparazione dati da serie temporali.
+
+- **learn()**
+  Entry-point: dati (serie temporali o (x, u, dt)) → modello surrogato (TwinComponent) pronto per creare/importare il twin e simulare la dinamica.
 
 ---
 
@@ -170,9 +169,6 @@ Health monitoring and prognostics.
 - **indicators.py**
   Transforms estimated parameters or residuals into **Health Indicators (HI)**.
 
-- **rul.py**
-  Simple (or ML) models to estimate Remaining Useful Life from HIs.
-
 ---
 
 ### `io/`
@@ -190,12 +186,12 @@ Input/output and integration.
 Reproducible use cases.
 
 - **pump_predictive_maintenance/**
-  Minimal example: pump digital twin with ODE physics + EKF, health and RUL.
+  Minimal example: pump digital twin with ODE physics + EKF and health.
 
 - **online_degradation/**
   More complex example with **simulated online measurements** and **degradation**:
   - step-by-step generation of (u, y) as from sensors,
-  - simulated fault (reduced efficiency) to verify anomaly, HI and RUL,
+  - simulated fault (reduced efficiency) to verify anomaly and HI,
   - AnomalyDetector (EMA/CUSUM) for adaptive alarms,
   - CSV export and plots for analysis.
 
@@ -212,8 +208,8 @@ Reproducible use cases.
 
 - **turbofan_engine_degradation/**
   Full pipeline for **NASA C-MAPSS** (turbofan degradation): load train/test, train
-  NeuralDynamicsModel on sensor + settings data, run TwinSystem (physics + EKF + health + RUL)
-  on test units, and evaluate RUL predictions vs ground truth.
+  NeuralDynamicsModel on sensor + settings data, run TwinSystem (physics + EKF + health)
+  on test units.
   Run `python examples/turbofan_engine_degradation/run_turbofan_twinops.py --fd FD001 [--plot]`.
 
 ---
@@ -249,7 +245,7 @@ for u_t, y_t in sensor_stream:
 
     x_hat = result.state
     anomaly_score = result.anomaly
-    rul = result.rul
+    health_indicator = result.health_indicator
 
     if anomaly_score > threshold:
         print("⚠️ Anomaly detected")
@@ -304,13 +300,13 @@ TwinOps can be used with real-world prognostic datasets. Below are the datasets 
 
 ### Turbofan Engine Degradation Simulation (NASA C-MAPSS)
 
-The **Turbofan Engine Degradation Simulation** dataset (NASA C-MAPSS — *Commercial Modular Aero-Propulsion System Simulation*) is a widely used benchmark for **prognostic and health management (PHM)** and **Remaining Useful Life (RUL)** estimation of turbofan engines.
+The **Turbofan Engine Degradation Simulation** dataset (NASA C-MAPSS — *Commercial Modular Aero-Propulsion System Simulation*) is a widely used benchmark for **prognostic and health management (PHM)** of turbofan engines.
 
-- **Content**: time series of sensor readings (temperature, pressure, RPM, etc.) on simulated engines degrading until failure. Each unit (engine) has a full life cycle; RUL is known at each time step.
+- **Content**: time series of sensor readings (temperature, pressure, RPM, etc.) on simulated engines degrading until failure. Each unit (engine) has a full life cycle.
 - **Variants**: FD001–FD004 with different operating conditions and number of fault modes.
-- **Use with TwinOps**: suitable for digital twin examples with state/parameter estimation, anomaly detection, health indicators, and RUL models (physics-based or ML).
+- **Use with TwinOps**: suitable for digital twin examples with state/parameter estimation, anomaly detection, and health indicators.
 - **Download**: [NASA Prognostics Data Repository](https://ti.arc.nasa.gov/tech/dash/groups/pcoe/prognostic-data-repository/) (C-MAPSS).
 
 - **Dove mettere i file**: nella repository, i dataset vanno in **`data/`** alla root. Per C-MAPSS: `data/turbofan_engine_degradation/` (vedi `data/README.md` per istruzioni di download e struttura).
 
-To integrate C-MAPSS in a TwinOps example, load the CSVs from `data/turbofan_engine_degradation/`, define signals and history, and feed the stream into `TwinSystem` (physics + estimator + health/RUL).
+To integrate C-MAPSS in a TwinOps example, load the CSVs from `data/turbofan_engine_degradation/`, define signals and history, and feed the stream into `TwinSystem` (physics + estimator + health).

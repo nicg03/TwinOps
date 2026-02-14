@@ -46,9 +46,8 @@ def test_import_estimation() -> None:
 
 
 def test_import_health() -> None:
-    from twinops.health import HealthIndicator, SimpleRUL
+    from twinops.health import HealthIndicator
     assert HealthIndicator is not None
-    assert SimpleRUL is not None
 
 
 def test_import_io() -> None:

@@ -5,7 +5,7 @@ Model: body with temperature T, heated by power P, cooled by convection
 to ambient T_amb. ODE: dT/dt = -alpha*(T - T_amb) + P/(m*c).
 Degradation: "fouling" reduces heat transfer (alpha decreases) in the real
 process → real system cools less → measured T higher than expected
-→ anomaly rises, HI drops, RUL updates.
+→ anomaly rises, HI drops.
 """
 
 import sys
@@ -19,7 +19,7 @@ sys.path.insert(0, str(ROOT))
 from twinops.core import TwinSystem, TwinHistory
 from twinops.physics import ODEModel, RK4Integrator
 from twinops.estimation import EKF, AnomalyDetector
-from twinops.health import HealthIndicator, SimpleRUL
+from twinops.health import HealthIndicator
 
 
 # ---------------------------------------------------------------------------
@@ -118,14 +118,12 @@ def main() -> None:
     def hi_from_anomaly(state: np.ndarray, anomaly: float) -> float:
         return float(np.clip(1.0 / (1.0 + 0.4 * anomaly), 0.0, 1.0))
     health = HealthIndicator(fn=hi_from_anomaly)
-    rul = SimpleRUL(hi_fail=0.3, min_rul=0.0, max_rul=100.0)
 
     twin = TwinSystem(
         physics=physics,
         estimator=ekf,
         residual=None,
         health=health,
-        rul=rul,
         dt=dt,
     )
 
@@ -171,7 +169,6 @@ def main() -> None:
             temperature=float(result.state[0]),
             anomaly=result.anomaly,
             health_indicator=result.health_indicator if result.health_indicator is not None else np.nan,
-            rul=result.rul if result.rul is not None else np.nan,
             ema=ema,
             cusum_pos=cusum_p,
             cusum_neg=cusum_n,
@@ -182,8 +179,8 @@ def main() -> None:
 
         if step == decay_start:
             print(f"  [step {step}] Fouling start (alpha begins to decrease)")
-        if step == decay_end and result.rul is not None:
-            print(f"  [step {step}] Fouling ramp end; estimated RUL: {result.rul:.2f} s")
+        if step == decay_end:
+            print(f"  [step {step}] Fouling ramp end (degradation complete).")
 
     print(f"Steps: {len(history)}, final T: {twin.state[0]:.2f}")
     print("Exporting CSV and plots...")
@@ -227,10 +224,9 @@ def _plot_results(history: TwinHistory, decay_start: int, decay_end: int, out_di
 
     ax = axes[2]
     ax.plot(steps, data["health_indicator"], label="Health Indicator")
-    ax.plot(steps, data["rul"], alpha=0.9, label="RUL (s)")
     ax.axvspan(decay_start, decay_end, color="gray", alpha=0.2)
     ax.axhline(0.3, color="red", linestyle=":", alpha=0.5, label="HI fail")
-    ax.set_ylabel("HI / RUL")
+    ax.set_ylabel("HI")
     ax.legend(loc="upper right", fontsize=8)
     ax.grid(True, alpha=0.3)
 

@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [{ name = "TwinOps" }]
-keywords = ["digital-twin", "predictive-maintenance", "physics-based", "kalman-filter", "RUL"]
+keywords = ["digital-twin", "predictive-maintenance", "physics-based", "kalman-filter"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",

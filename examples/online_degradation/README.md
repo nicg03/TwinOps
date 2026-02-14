@@ -7,7 +7,7 @@ Three examples to verify the TwinOps pipeline with **simulated online measuremen
 ## 1. `run_online_degradation.py` — step fault
 
 - **Online simulation**: measurements `(u_t, y_t)` generated **step-by-step** (as from real sensors).
-- **Step fault**: up to step 400 the process is "healthy"; from step 400 efficiency drops to 0.72. Measurements diverge from the model → **anomaly** rises, **HI** drops, **RUL** updates.
+- **Step fault**: up to step 400 the process is "healthy"; from step 400 efficiency drops to 0.72. Measurements diverge from the model → **anomaly** rises, **HI** drops.
 - **AnomalyDetector (EMA/CUSUM)** and **export** to CSV/plots.
 
 **Run:**
@@ -24,8 +24,8 @@ python3 examples/online_degradation/run_online_degradation.py
 
 ## 2. `run_gradual_degradation.py` — gradual degradation
 
-- Same pipeline (twin + EKF + health + RUL + AnomalyDetector).
-- **Gradual degradation**: efficiency stays 1.0 until step 200; between steps 200 and 600 it **linearly** decreases from 1.0 to 0.70; then stays 0.70. Verifies that anomaly, HI and RUL respond to a **slow trend** rather than a step.
+- Same pipeline (twin + EKF + health + AnomalyDetector).
+- **Gradual degradation**: efficiency stays 1.0 until step 200; between steps 200 and 600 it **linearly** decreases from 1.0 to 0.70; then stays 0.70. Verifies that anomaly and HI respond to a **slow trend** rather than a step.
 - Export: `gradual_degradation_history.csv`, `gradual_degradation_plots.png`.
 
 **Run:**
@@ -41,7 +41,7 @@ python3 examples/online_degradation/run_gradual_degradation.py
 ## 3. `run_thermal_degradation.py` — thermal system with fouling
 
 - **Different physics**: thermal system (temperature T, power P). ODE: `dT/dt = -alpha*(T - T_amb) + P/(m*c)`.
-- **Degradation**: in the "real" process the coefficient alpha decreases linearly (fouling → worse heat transfer → measured T higher than expected) → anomaly rises, HI drops, RUL updates.
+- **Degradation**: in the "real" process the coefficient alpha decreases linearly (fouling → worse heat transfer → measured T higher than expected) → anomaly rises, HI drops.
 - Custom health indicator from anomaly (state is temperature, not in [0,2] as in the pump).
 - Export: `thermal_degradation_history.csv`, `thermal_degradation_plots.png`.
 

@@ -9,7 +9,7 @@ import numpy as np
 class TwinComponent(ABC):
     """
     Base interface for all twin components:
-    physics, residual model, estimator, health/RUL.
+    physics, residual model, estimator, health.
     """
 
     @abstractmethod
