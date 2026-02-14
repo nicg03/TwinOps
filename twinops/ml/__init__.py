@@ -9,6 +9,7 @@ Struttura logica:
 """
 
 from twinops.ml.dynamics import NeuralDynamicsModel, default_dynamics_net
+from twinops.ml.learner import Learner
 from twinops.ml.residual import TorchResidualModel
 from twinops.ml.training import (
     compute_dx_dt_central,
@@ -36,6 +37,7 @@ def learn(*args, **kwargs):
 
 
 __all__ = [
+    "Learner",
     "TorchResidualModel",
     "NeuralDynamicsModel",
     "default_dynamics_net",
